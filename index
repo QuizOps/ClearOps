@@ -1,0 +1,2276 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clearance Manager — Crude & Products</title>
+<!-- fonts loaded from system stack -->
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.10.0/lib/msal-browser.min.js"></script>
+<style>
+:root {
+  --bg: #0d0f14;
+  --bg2: #13161e;
+  --bg3: #1a1e28;
+  --bg4: #21263300;
+  --border: #2a2f3d;
+  --border2: #363d52;
+  --text: #e8eaf0;
+  --text2: #8b92a8;
+  --text3: #555c70;
+  --accent: #3b7dd8;
+  --accent2: #1a3a6b;
+  --green: #2a7a4a;
+  --green-bg: #0d2318;
+  --green-text: #4dbe7a;
+  --red: #8b2b2b;
+  --red-bg: #230d0d;
+  --red-text: #e05c5c;
+  --orange: #8b5a1a;
+  --orange-bg: #231508;
+  --orange-text: #e09040;
+  --blue-bg: #0d1a30;
+  --blue-text: #5b9be0;
+  --purple: #5b3a9b;
+  --purple-bg: #160d2a;
+  --purple-text: #9b70e0;
+  --yellow-text: #d4b84a;
+  --yellow-bg: #1e1700;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --mono: 'Consolas', 'Courier New', monospace;
+  --radius: 6px;
+  --radius2: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 13px; }
+::selection { background: var(--accent2); }
+
+/* TOPBAR */
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 52px; background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+.topbar-logo { display: flex; align-items: center; gap: 10px; }
+.logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 5px; display: flex; align-items: center; justify-content: center; }
+.logo-mark svg { width: 16px; height: 16px; fill: white; }
+.logo-text { font-size: 14px; font-weight: 600; letter-spacing: -0.02em; }
+.logo-sub { font-size: 11px; color: var(--text2); font-weight: 300; }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.user-pill { display: flex; align-items: center; gap: 8px; padding: 4px 10px; background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; font-size: 12px; color: var(--text2); }
+.user-dot { width: 7px; height: 7px; background: var(--green-text); border-radius: 50%; }
+.outlook-status { font-size: 11px; padding: 3px 10px; border-radius: 20px; border: 1px solid; cursor: pointer; }
+.outlook-status.connected { color: var(--green-text); border-color: var(--green); background: var(--green-bg); }
+.outlook-status.disconnected { color: var(--orange-text); border-color: var(--orange); background: var(--orange-bg); }
+
+/* LAYOUT */
+.layout { display: flex; height: calc(100vh - 52px); }
+.sidebar { width: 220px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+.main { flex: 1; overflow-y: auto; background: var(--bg); }
+
+/* SIDEBAR */
+.sidebar-section { padding: 16px 12px 8px; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; color: var(--text3); text-transform: uppercase; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 14px; cursor: pointer; border-radius: var(--radius); margin: 1px 6px; color: var(--text2); font-size: 13px; transition: all 0.12s; }
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: var(--accent2); color: #8ab4e8; }
+.nav-item .nav-icon { width: 16px; text-align: center; font-size: 13px; flex-shrink: 0; }
+.nav-badge { margin-left: auto; background: var(--accent); color: white; border-radius: 10px; padding: 1px 7px; font-size: 10px; font-weight: 600; }
+.sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 8px 12px; }
+
+/* PAGES */
+.page { display: none; padding: 24px; max-width: 1400px; }
+.page.active { display: block; }
+.page-header { margin-bottom: 24px; }
+.page-title { font-size: 22px; font-weight: 600; letter-spacing: -0.03em; }
+.page-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+/* CARDS */
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius2); padding: 20px; }
+.card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 14px; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px; }
+
+/* FORM */
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 11px; color: var(--text2); margin-bottom: 5px; font-weight: 500; letter-spacing: 0.03em; }
+.field input, .field select, .field textarea { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 11px; color: var(--text); font-family: var(--font); font-size: 13px; outline: none; transition: border-color 0.12s; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+.field select { cursor: pointer; }
+.field textarea { resize: vertical; line-height: 1.6; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+/* UPLOAD ZONE */
+.upload-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius2); padding: 28px; text-align: center; cursor: pointer; transition: all 0.15s; background: var(--bg3); }
+.upload-zone:hover, .upload-zone.over { border-color: var(--accent); background: var(--blue-bg); }
+.upload-zone .uz-icon { font-size: 28px; margin-bottom: 10px; }
+.upload-zone .uz-label { font-size: 13px; color: var(--text2); }
+.upload-zone .uz-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.q88-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.q88-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); font-size: 12px; }
+.q88-item .q88-icon { color: var(--red-text); }
+.q88-item .q88-name { flex: 1; color: var(--text); font-family: var(--mono); }
+.q88-item .q88-size { color: var(--text3); }
+.q88-remove { cursor: pointer; color: var(--text3); hover: var(--red-text); padding: 2px 6px; border-radius: 3px; }
+.q88-remove:hover { color: var(--red-text); background: var(--red-bg); }
+
+/* CHIPS */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { padding: 5px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); transition: all 0.12s; user-select: none; }
+.chip:hover { border-color: var(--border2); color: var(--text); }
+.chip.on { background: var(--accent2); border-color: var(--accent); color: var(--blue-text); font-weight: 500; }
+.chip.on-green  { background: var(--green-bg); border-color: var(--green); color: var(--green-text); font-weight: 500; }
+.chip.on-yellow { background: #2a2500; color: #f0c040; border-color: #8a7000; }
+
+/* BUTTONS */
+.btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg3); color: var(--text); font-family: var(--font); font-size: 13px; cursor: pointer; transition: all 0.12s; font-weight: 500; }
+.btn:hover { border-color: var(--border2); background: var(--bg4); }
+.btn:active { transform: scale(0.98); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: white; }
+.btn-primary:hover { background: #2d66ba; border-color: #2d66ba; }
+.btn-success { background: var(--green); border-color: var(--green); color: var(--green-text); }
+.btn-success:hover { background: #235e3a; }
+.btn-danger { background: var(--red-bg); border-color: var(--red); color: var(--red-text); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+
+/* STATUS BADGES */
+.badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; }
+.badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.b-ok { color: var(--green-text); background: var(--green-bg); border: 1px solid var(--green); }
+.b-ok-sw { color: var(--yellow-text); background: var(--yellow-bg); border: 1px solid #5a4a10; }
+.b-rej { color: var(--red-text); background: var(--red-bg); border: 1px solid var(--red); }
+.b-sent { color: var(--blue-text); background: var(--blue-bg); border: 1px solid #1a3a6b; }
+.b-pend { color: var(--orange-text); background: var(--orange-bg); border: 1px solid var(--orange); }
+.b-notyet { color: var(--text3); background: var(--bg3); border: 1px solid var(--border); }
+.b-cleared { color: var(--purple-text); background: var(--purple-bg); border: 1px solid var(--purple); }
+
+/* EMAIL PREVIEW */
+.email-preview { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: var(--mono); font-size: 11.5px; line-height: 1.7; color: var(--text2); white-space: pre-wrap; max-height: 280px; overflow-y: auto; }
+.email-header-line { color: var(--accent); }
+
+/* TRACKING TABLE */
+.tracking-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius2); }
+.tracking-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+.tracking-table thead tr { background: var(--bg3); }
+.tracking-table th { padding: 10px 14px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); }
+.tracking-table th.dest { background: #13161e; color: var(--blue-text); font-size: 10px; }
+.tracking-table th.cp-header { background: #1a1320; color: var(--purple-text); }
+.tracking-table td { padding: 9px 14px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+.tracking-table tr:last-child td { border-bottom: none; }
+.tracking-table tr:hover td { background: var(--bg3); }
+.tracking-table td.vessel-cell { font-weight: 600; font-family: var(--mono); color: var(--text); }
+.tracking-table td.grade-cell { font-family: var(--mono); color: var(--blue-text); font-size: 11px; }
+.tracking-table td.deal-cell { font-family: var(--mono); color: var(--text3); font-size: 11px; }
+.tracking-table td.cond-cell { font-size: 11px; color: var(--text2); max-width: 140px; white-space: normal; }
+.dest-cell { text-align: center; min-width: 90px; }
+
+/* NOTIF */
+.notif { display: none; padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-top: 10px; }
+.notif.show { display: block; }
+.notif.ok { background: var(--green-bg); color: var(--green-text); border: 1px solid var(--green); }
+.notif.err { background: var(--red-bg); color: var(--red-text); border: 1px solid var(--red); }
+.notif.info { background: var(--blue-bg); color: var(--blue-text); border: 1px solid #1a3a6b; }
+
+/* SPINNER */
+.spin { display: inline-block; width: 12px; height: 12px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* PROGRESS */
+.prog-row { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text2); padding: 8px 0; }
+.prog-bar { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.prog-fill { height: 100%; background: var(--accent); transition: width 0.25s; border-radius: 2px; }
+
+/* STATS ROW */
+.stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius2); padding: 14px 16px; }
+.stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); font-weight: 600; }
+.stat-val { font-size: 26px; font-weight: 600; margin-top: 4px; font-family: var(--mono); }
+.stat-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+/* CONFIG TABLE */
+.cfg-table { width: 100%; border-collapse: collapse; }
+.cfg-table tr { border-bottom: 1px solid var(--border); }
+.cfg-table tr:last-child { border-bottom: none; }
+.cfg-table td { padding: 8px 4px; }
+.cfg-table input { background: var(--bg3); border: 1px solid var(--border); border-radius: 4px; padding: 6px 9px; color: var(--text); font-size: 12px; font-family: var(--font); width: 100%; outline: none; }
+.cfg-table input:focus { border-color: var(--accent); }
+.send-toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.toggle { width: 34px; height: 18px; background: var(--bg3); border: 1px solid var(--border); border-radius: 9px; position: relative; transition: background 0.15s; }
+.toggle.on { background: var(--accent2); border-color: var(--accent); }
+.toggle::after { content: ''; position: absolute; width: 12px; height: 12px; background: var(--text3); border-radius: 50%; top: 2px; left: 2px; transition: all 0.15s; }
+.toggle.on::after { background: var(--accent); transform: translateX(16px); }
+
+/* MODAL overlay workaround */
+.modal-wrap { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: center; justify-content: center; }
+.modal-wrap.show { display: flex; }
+.modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius2); padding: 24px; width: 520px; max-width: 95vw; max-height: 80vh; overflow-y: auto; }
+.modal-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+.modal-foot { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+/* TABS inside page */
+.page-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+.ptab { padding: 8px 16px; font-size: 13px; cursor: pointer; color: var(--text2); border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; border-top: none; border-left: none; border-right: none; font-family: var(--font); }
+.ptab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.ptab-panel { display: none; }
+.ptab-panel.active { display: block; }
+
+/* TEMPLATE VAR TAGS */
+.var-tag { display: inline-block; background: var(--accent2); color: var(--blue-text); border-radius: 4px; padding: 1px 6px; font-size: 11px; font-family: var(--mono); margin: 2px; cursor: pointer; border: 1px solid #1a3a6b; }
+.var-tag:hover { background: var(--accent); color: white; }
+
+.vessel-row { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px; margin-bottom:8px; display:flex; flex-direction:column; gap:8px; }
+.vessel-row-header { display:flex; align-items:center; gap:10px; }
+.vessel-row-num { font-size:11px; color:var(--text3); font-family:var(--mono); min-width:20px; }
+.vessel-name-input { flex:1; }
+.vessel-q88-area { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.vessel-q88-drop { border:1px dashed var(--border2); border-radius:var(--radius); padding:6px 12px; font-size:12px; color:var(--text3); cursor:pointer; transition:all 0.12s; }
+.vessel-q88-drop:hover { border-color:var(--accent); color:var(--blue-text); background:var(--blue-bg); }
+.vessel-q88-area.drag-over { background:var(--blue-bg); border-radius:var(--radius); outline:2px dashed var(--accent); }
+.vessel-q88-area.drag-over .vessel-q88-drop { border-color:var(--accent); color:var(--blue-text); }
+.vessel-q88-file { display:inline-flex; align-items:center; gap:6px; background:var(--blue-bg); border:1px solid var(--accent2); border-radius:var(--radius); padding:3px 8px; font-size:11px; color:var(--blue-text); font-family:var(--mono); }
+.vessel-q88-file .rm { cursor:pointer; color:var(--text3); margin-left:4px; }
+.vessel-q88-file .rm:hover { color:var(--red-text); }
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* EMPTY STATE */
+.empty-state { text-align: center; padding: 48px 24px; color: var(--text3); }
+.empty-state .es-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+.empty-state .es-label { font-size: 14px; }
+.empty-state .es-sub { font-size: 12px; margin-top: 6px; }
+
+/* Vetting column */
+.vetting-cell { font-family: var(--mono); font-size: 11px; }
+
+hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M2 18h20v2H2zm0-4h20v2H2zm3-4h14v2H5zM8 6h8v2H8z"/></svg>
+    </div>
+    <div>
+      <div class="logo-text">ClearanceOps</div>
+      <div class="logo-sub">Crude & Products — Vessel Clearance</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div style="display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text2)">
+      <span id="proxyStatusDot" style="width:7px;height:7px;background:#888;border-radius:50%;flex-shrink:0"></span>
+      <span id="proxyStatusLabel">Proxy...</span>
+    </div>
+    <div id="outlookBtn" class="outlook-status disconnected" onclick="toggleOutlook()" title="Connexion Graph optionnelle — l'envoi passe par le proxy local">⬡ Outlook (Graph)</div>
+    <div class="user-pill"><div class="user-dot"></div><span id="userName">MAQUEDA Andrea</span></div>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">Navigation</div>
+    <div class="nav-item active" onclick="showPage('new-clearance', this)">
+      <span class="nav-icon">＋</span> New Clearance
+    </div>
+    <div class="nav-item" onclick="showPage('tracking', this)">
+      <span class="nav-icon">◎</span> Tracking Board
+      <span class="nav-badge" id="trackBadge">0</span>
+    </div>
+    <div class="nav-item" onclick="showPage('q88-vault', this)">
+      <span class="nav-icon">📁</span> Q88 Vault
+    </div>
+    <hr class="sidebar-divider">
+    <div class="sidebar-section">Settings</div>
+    <div class="nav-item" onclick="showPage('config-depots', this)">
+      <span class="nav-icon">⚓</span> Depots & Emails
+    </div>
+    <div class="nav-item" onclick="showPage('config-cps', this)">
+      <span class="nav-icon">🤝</span> Counterparties
+    </div>
+    <div class="nav-item" onclick="showPage('config-template', this)">
+      <span class="nav-icon">✉</span> Email Template
+    </div>
+    <div class="nav-item" onclick="showPage('config-outlook', this)">
+      <span class="nav-icon">⚙</span> Outlook / API
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- PAGE: NEW CLEARANCE -->
+    <div id="page-new-clearance" class="page active">
+      <div class="page-header">
+        <div class="page-title">New Clearance Request</div>
+        <div class="page-sub">Upload the Q88, fill vessel details, select destinations and counterparties, then send.</div>
+      </div>
+
+      <!-- VESSEL ROWS -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>Vessels & Q88</span>
+          <button class="btn btn-sm" onclick="addVesselRow()">+ Add vessel</button>
+        </div>
+        <div id="vesselRows"></div>
+      </div>
+
+      <!-- DEAL INFO -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Deal Information</div>
+        <div class="row3">
+          <div class="field"><label>Product / Grade</label><input type="text" id="product" placeholder="WTI CRUDE" /></div>
+          <div class="field"><label>Deal Reference</label><input type="text" id="dealRef" placeholder="TRD-2026-0314" /></div>
+          <div class="field"><label>Load Port</label><input type="text" id="loadPort" placeholder="Cushing / LOOP" /></div>
+        </div>
+        <div class="row3">
+          <div class="field"><label>Laycan Start</label><input type="date" id="lcStart" /></div>
+          <div class="field"><label>Laycan End</label><input type="date" id="lcEnd" /></div>
+          <div class="field"><label>Additional constraints</label><input type="text" id="constraints" placeholder="Age limit, flag restrictions..." /></div>
+        </div>
+      </div>
+
+      <!-- DEPOTS -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Destinations / Depots to clear <span style="color:var(--text3); font-weight:400; text-transform:none">(select all that apply)</span></div>
+        <div class="chips" id="depotChips"></div>
+        <div style="margin-top:10px; font-size:11px; color:var(--text3)"><span id="depotSelCount">0</span> depot(s) selected</div>
+      </div>
+
+      <!-- COUNTERPARTIES -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Counterparties <span style="color:var(--text3); font-weight:400; text-transform:none">(select all that apply)</span></div>
+        <div class="chips" id="cpChips"></div>
+        <div style="margin-top:10px; font-size:11px; color:var(--text3)"><span id="cpSelCount">0</span> counterparty(ies) selected</div>
+      </div>
+
+      <!-- CC -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">CC <span style="color:var(--text3); font-weight:400; text-transform:none">(copie sur tous les emails)</span></div>
+        <div class="chips" id="ccChips"></div>
+        <div style="margin-top:10px; font-size:11px; color:var(--text3)"><span id="ccSelCount">0</span> CC selected</div>
+      </div>
+
+      <!-- EMAIL PREVIEW -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Email Preview</div>
+        <div class="email-preview" id="emailPreview">← Fill vessel info and select destinations to preview the email.</div>
+        <div class="btn-row">
+          <button class="btn" onclick="refreshPreview()">↻ Refresh preview</button>
+          <button class="btn btn-primary" onclick="sendClearances()">
+            <span id="sendSpinWrap"></span>✉ Send via Outlook
+          </button>
+        </div>
+        <div class="notif" id="sendNotif"></div>
+      </div>
+    </div>
+
+    <!-- PAGE: TRACKING BOARD -->
+    <div id="page-tracking" class="page">
+      <div class="page-header">
+        <div class="page-title">Tracking Board</div>
+        <div class="page-sub">Live clearance status across all deals, vessels and destinations.</div>
+      </div>
+
+      <div class="stats-row" id="statsRow">
+        <div class="stat-card"><div class="stat-label">Total</div><div class="stat-val" id="st-total">0</div><div class="stat-sub">clearances</div></div>
+        <div class="stat-card"><div class="stat-label">Cleared</div><div class="stat-val" style="color:var(--green-text)" id="st-ok">0</div><div class="stat-sub">OK / OK SW</div></div>
+        <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-val" style="color:var(--orange-text)" id="st-pend">0</div><div class="stat-sub">awaiting reply</div></div>
+        <div class="stat-card"><div class="stat-label">Rejected</div><div class="stat-val" style="color:var(--red-text)" id="st-rej">0</div><div class="stat-sub">refusals</div></div>
+        <div class="stat-card"><div class="stat-label">Vetting</div><div class="stat-val" style="color:var(--blue-text)" id="st-vet">0</div><div class="stat-sub">refs received</div></div>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; align-items:center">
+        <input type="text" id="trackSearch" placeholder="🔍 Vessel, deal, grade..." style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:7px 12px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;width:200px" oninput="renderTracking()" />
+        <select id="fltGrade"  onchange="renderTracking()" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;color:var(--text);font-size:13px;cursor:pointer"><option value="">All grades</option></select>
+        <select id="fltStatus" onchange="renderTracking()" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;color:var(--text);font-size:13px;cursor:pointer">
+          <option value="">All statuses</option>
+          <option value="sent">Sent</option>
+          <option value="ok">OK</option>
+          <option value="ok_sw">OK SW</option>
+          <option value="rejected">Rejected</option>
+          <option value="not_yet">Not yet</option>
+          <option value="pend">Pending</option>
+        </select>
+        <select id="fltCP"    onchange="renderTracking()" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;color:var(--text);font-size:13px;cursor:pointer"><option value="">All CPs</option></select>
+        <select id="fltDepot" onchange="renderTracking()" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;color:var(--text);font-size:13px;cursor:pointer"><option value="">All depots</option></select>
+        <div style="display:flex;gap:6px;align-items:center">
+          <label style="font-size:11px;color:var(--text3)">Laycan from</label>
+          <input type="date" id="fltLaycanFrom" onchange="renderTracking()" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:6px 8px;color:var(--text);font-size:12px;outline:none" />
+          <label style="font-size:11px;color:var(--text3)">to</label>
+          <input type="date" id="fltLaycanTo" onchange="renderTracking()" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:6px 8px;color:var(--text);font-size:12px;outline:none" />
+        </div>
+        <button class="btn btn-sm" onclick="clearFilters()" style="color:var(--text3)">✕ Clear</button>
+      </div>
+      <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center">
+        <button class="btn btn-success" onclick="analyseOutlook()">
+          <span id="anlSpinner"></span>🔍 Analyse Outlook replies (AI)
+        </button>
+        <button class="btn" id="btnHideOps" onclick="toggleHideOps()">👁 Hide Ops</button>
+        <button class="btn" onclick="debugInbox()">🔎 Debug inbox</button>
+        <button class="btn" onclick="exportCSV()">⬇ Export CSV</button>
+        <button class="btn" onclick="loadFromExcel()" title="Recharger depuis Excel ClearOps">🔄 Load Excel</button>
+        <button class="btn btn-primary" onclick="syncAllToExcel()" title="Sync all rows to Excel ClearOps">💾 Sync Excel</button>
+        <div id="syncStatus" style="font-size:11px;color:var(--text3);margin-left:auto"></div>
+      </div>
+      <div class="prog-row" id="anlProg" style="display:none">
+        <span id="anlMsg">Reading emails...</span>
+        <div class="prog-bar"><div class="prog-fill" id="anlFill" style="width:0%"></div></div>
+        <span id="anlPct">0%</span>
+      </div>
+      <div class="notif" id="trackNotif"></div>
+
+      <div class="tracking-wrap">
+        <table class="tracking-table" id="trackTable">
+          <thead id="trackHead"></thead>
+          <tbody id="trackBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PAGE: Q88 VAULT -->
+    <div id="page-q88-vault" class="page">
+      <div class="page-header">
+        <div class="page-title">Q88 Vault</div>
+        <div class="page-sub">All uploaded vessel questionnaires, stored in-session.</div>
+      </div>
+      <div class="upload-zone" style="margin-bottom:16px" onclick="document.getElementById('vaultInput').click()"
+        ondragover="event.preventDefault();this.classList.add('over')"
+        ondragleave="this.classList.remove('over')"
+        ondrop="handleVaultDrop(event)">
+        <div class="uz-icon">📂</div>
+        <div class="uz-label">Add Q88 documents to vault</div>
+        <div class="uz-sub">PDF, DOC, DOCX</div>
+      </div>
+      <input type="file" id="vaultInput" accept=".pdf,.doc,.docx" multiple style="display:none" onchange="addToVault(this.files)">
+      <div id="vaultList" style="display:flex; flex-direction:column; gap:6px;"></div>
+    </div>
+
+    <!-- PAGE: CONFIG DEPOTS -->
+    <div id="page-config-depots" class="page">
+      <div class="page-header">
+        <div class="page-title">Depots & Destinations</div>
+        <div class="page-sub">Manage terminals, ports and their associated email addresses.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Depot list</div>
+        <table class="cfg-table" id="depotCfgTable"></table>
+        <div class="btn-row"><button class="btn" onclick="addDepot()">+ Add depot</button><button class="btn btn-primary" onclick="saveDepots()">Save</button></div>
+        <div class="notif" id="depotNotif"></div>
+      </div>
+    </div>
+
+    <!-- PAGE: CONFIG CPs -->
+    <div id="page-config-cps" class="page">
+      <div class="page-header">
+        <div class="page-title">Counterparties</div>
+        <div class="page-sub">Vetting departments and clearance contacts.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Counterparty list</div>
+        <table class="cfg-table" id="cpCfgTable"></table>
+        <div class="btn-row"><button class="btn" onclick="addCP()">+ Add counterparty</button><button class="btn btn-primary" onclick="saveCPs()">Save</button></div>
+        <div class="notif" id="cpNotif"></div>
+      </div>
+    </div>
+
+    <!-- PAGE: CONFIG TEMPLATE -->
+    <div id="page-config-template" class="page">
+      <div class="page-header">
+        <div class="page-title">Email Template</div>
+        <div class="page-sub">Customize the clearance request email body. Click a tag to insert it.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Available variables</div>
+        <div id="varTags" style="margin-bottom:16px">
+          <span class="var-tag" onclick="insertVar('{{VESSEL}}')">{{VESSEL}}</span>
+          <span class="var-tag" onclick="insertVar('{{PRODUCT}}')">{{PRODUCT}}</span>
+          <span class="var-tag" onclick="insertVar('{{DEAL_REF}}')">{{DEAL_REF}}</span>
+          <span class="var-tag" onclick="insertVar('{{DEPOT}}')">{{DEPOT}}</span>
+          <span class="var-tag" onclick="insertVar('{{CP_NAME}}')">{{CP_NAME}}</span>
+          <span class="var-tag" onclick="insertVar('{{LAYCAN_START}}')">{{LAYCAN_START}}</span>
+          <span class="var-tag" onclick="insertVar('{{LAYCAN_END}}')">{{LAYCAN_END}}</span>
+          <span class="var-tag" onclick="insertVar('{{QTY}}')">{{QTY}}</span>
+          <span class="var-tag" onclick="insertVar('{{LOAD_PORT}}')">{{LOAD_PORT}}</span>
+          <span class="var-tag" onclick="insertVar('{{SENDER_NAME}}')">{{SENDER_NAME}}</span>
+          <span class="var-tag" onclick="insertVar('{{SENDER_MAIL}}')">{{SENDER_MAIL}}</span>
+        </div>
+        <div class="field"><label>Subject</label><input type="text" id="tplSubject" /></div>
+        <div class="field"><label>Body</label><textarea id="tplBody" rows="16"></textarea></div>
+        <div class="btn-row"><button class="btn btn-primary" onclick="saveTemplate()">Save template</button></div>
+        <div class="notif" id="tplNotif"></div>
+      </div>
+    </div>
+
+    <!-- PAGE: CONFIG OUTLOOK -->
+    <div id="page-config-outlook" class="page">
+      <div class="page-header">
+        <div class="page-title">Outlook & API Configuration</div>
+        <div class="page-sub">Connexion directe Outlook via Microsoft Graph — aucun proxy Python requis.</div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Your identity</div>
+        <div class="row2">
+          <div class="field"><label>First name</label><input type="text" id="cfgFirst" placeholder="Andrea" /></div>
+          <div class="field"><label>Last name</label><input type="text" id="cfgLast" placeholder="MAQUEDA" /></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Email (sender)</label><input type="text" id="cfgMail" placeholder="andrea.maqueda@totalenergies.com" /></div>
+          <div class="field"><label>Phone</label><input type="text" id="cfgPhone" placeholder="+41 22 710 16 76" /></div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Connexion Outlook (Microsoft Graph)</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6">
+          Clique le bouton ci-dessous — une fenetre de connexion Microsoft s'ouvrira.<br>
+          Connecte-toi avec ton compte TotalEnergies. La webapp lira et enverra les emails directement.
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="msalLogin()" id="btnMsalLogin">
+            ⬡ Se connecter a Outlook
+          </button>
+          <div id="msalUserInfo" style="font-size:12px;color:var(--text2)"></div>
+        </div>
+        <div class="notif" id="outlookNotif" style="margin-top:10px"></div>
+        <div style="margin-top:14px;font-size:11px;color:var(--text3)">
+          App ID: 6a89c105-0067-424a-9f13-7b4fd43dc0ac · Tenant: 329e91b0-e21f-48fb-a071-456717ecc28e
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Claude AI — LiteLLM TGS Proxy</div>
+        <div class="row2">
+          <div class="field"><label>LiteLLM Endpoint</label><input type="text" id="cfgLiteLLMEndpoint" placeholder="https://api.chatgpttte.iasp.tgscloud.net/plugins/litellm/api/v1/chat/completions" /></div>
+          <div class="field"><label>Model</label><input type="text" id="cfgLiteLLMModel" placeholder="bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0" /></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>api-key</label><input type="password" id="cfgLiteLLMKey" placeholder="be67cddb••••••••••••••" /></div>
+          <div class="field"><label>X-Apim-User-Id</label><input type="text" id="cfgApimUser" placeholder="crude-terminal" /></div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:10px" onclick="saveCfg()">Save configuration</button>
+        <div class="notif" id="cfgNotif" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<!-- MODAL: Debug inbox -->
+<div class="modal-wrap" id="debugModal">
+  <div class="modal" style="width:700px; max-width:95vw">
+    <div class="modal-title">🔎 Inbox debug — derniers emails reçus</div>
+    <p style="font-size:12px; color:var(--text2); margin-bottom:12px">Emails des 3 derniers jours (sans filtre sujet). Vérifie que les sujets des réponses contiennent bien le nom du vessel ou "clearance".</p>
+    <div id="debugList" style="font-size:11px; font-family:var(--mono); max-height:400px; overflow-y:auto; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:10px; color:var(--text2)">
+      Chargement...
+    </div>
+    <div id="debugKeywords" style="margin-top:10px; font-size:11px; color:var(--text3)"></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('debugModal')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Outlook auth -->
+<div class="modal-wrap" id="outlookModal">
+  <div class="modal">
+    <div class="modal-title">Connect to Outlook</div>
+    <p style="font-size:13px; color:var(--text2); margin-bottom:16px">An OAuth2 popup will open for you to authenticate with your Microsoft 365 account. Ensure your Azure App has <code style="font-family:var(--mono)">Mail.ReadWrite</code> and <code style="font-family:var(--mono)">Mail.Send</code> permissions.</p>
+    <div class="field"><label>Azure Client ID</label><input type="text" id="modalClientId" /></div>
+    <div class="field"><label>Tenant ID</label><input type="text" id="modalTenantId" /></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('outlookModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="doOutlookAuth()">Authenticate</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+let depots = []; // loaded from Excel on startup
+
+let counterparties = []; // loaded from Excel on startup
+
+let cfg = {
+  firstName: 'Andrea', lastName: 'MAQUEDA',
+  email: 'andrea.maqueda@totalenergies.com',
+  phone: '+41 22 710 16 76',
+  clientId: '', tenantId: '', secret: '',
+  litellmEndpoint: 'https://api.chatgpttte.iasp.tgscloud.net/plugins/litellm/api/v1/chat/completions',
+  litellmModel: 'bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  litellmKey: 'be67cddbdc4441dabccff7627f599d13',
+  apimUser: 'clearance-ops',
+  outlookConnected: false
+};
+
+// ─── LITELLLM PROXY CALL (same pattern as TGS terminal) ──────────────────────
+async function callLiteLLM(systemPrompt, userPrompt) {
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt }
+  ];
+  const r = await fetch(cfg.litellmEndpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': cfg.litellmKey,
+      'X-Apim-User-Id': cfg.apimUser,
+    },
+    body: JSON.stringify({
+      model: cfg.litellmModel,
+      messages,
+      max_tokens: 1200,
+      temperature: 0.2,
+    }),
+    signal: AbortSignal.timeout(30000),
+  });
+  if (!r.ok) {
+    const err = await r.text();
+    throw new Error('LiteLLM ' + r.status + ': ' + err.slice(0, 200));
+  }
+  const j = await r.json();
+  return j.choices?.[0]?.message?.content || '';
+}
+
+let tplSubject = 'Vessel Clearance Request – {{VESSEL}} – {{PRODUCT}} – {{LAYCAN_START}}/{{LAYCAN_END}}{{PORT_PART}} – {{CP_NAME}}';
+let tplBody = `Dear Sir/Madam,
+
+We hereby request clearance for the following vessel(s) for your terminal/vetting purposes.
+
+Vessel:         {{VESSEL}}
+Product/Grade:  {{PRODUCT}}
+Load Port:      {{LOAD_PORT}}
+Discharge Port: {{PORT}}
+Laycan:         {{LAYCAN_START}} / {{LAYCAN_END}}
+Deal Reference: {{DEAL_REF}}{{CONSTRAINTS_LINE}}
+
+Please find attached the Q88 vessel questionnaire for your review.
+
+We would appreciate your confirmation of acceptance or any restrictions at your earliest convenience.
+
+Kind regards,
+
+{{SENDER_NAME}}
+TotalEnergies Trading & Shipping
+{{SENDER_MAIL}}`;
+
+let selectedDepots = new Set();
+let selectedCPs    = new Set();
+let selectedCCs    = new Set();
+let trackingRows = [];
+let hideOpsChecked = false;
+let vesselRows = [];     // [{vessel, q88Files:[{name,size,data}]}]
+let q88Files = [];       // legacy — kept for vault compat
+let vaultFiles = [];
+
+// ─── NAV ────────────────────────────────────────────────────────────────────
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+  if (id === 'tracking') renderTracking();
+  if (id === 'config-depots') renderDepotCfg();
+  if (id === 'config-cps') renderCPCfg();
+  if (id === 'config-template') loadTemplatePage();
+  if (id === 'config-outlook') loadOutlookPage();
+  if (id === 'q88-vault') renderVault();
+}
+
+// ─── VESSEL ROWS ──────────────────────────────────────────────────────────────
+function addVesselRow(vesselName) {
+  var idx = vesselRows.length;
+  vesselRows.push({ vessel: vesselName || '', q88s: [] });
+  renderVesselRows();
+  // Focus the new vessel input
+  setTimeout(function() {
+    var inp = document.getElementById('vname-' + idx);
+    if (inp) inp.focus();
+  }, 50);
+}
+
+function removeVesselRow(idx) {
+  vesselRows.splice(idx, 1);
+  renderVesselRows();
+}
+
+function renderVesselRows() {
+  var el = document.getElementById('vesselRows');
+  if (!el) return;
+  if (!vesselRows.length) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 4px">Aucun vessel — clique "+ Add vessel".</div>';
+    return;
+  }
+  el.innerHTML = vesselRows.map(function(row, idx) {
+    var q88html = row.q88s.map(function(f, fi) {
+      return '<span class="vessel-q88-file">📄 ' + f.name +
+        '<span class="rm" onclick="removeVesselQ88(' + idx + ',' + fi + ')">✕</span></span>';
+    }).join('');
+    var removeBtn = vesselRows.length > 1
+      ? '<button class="btn btn-sm btn-danger" onclick="removeVesselRow(' + idx + ')">✕</button>'
+      : '';
+    return '<div class="vessel-row" id="vrow-' + idx + '">' +
+      '<div class="vessel-row-header">' +
+        '<span class="vessel-row-num">#' + (idx+1) + '</span>' +
+        '<input class="vessel-name-input" type="text" id="vname-' + idx + '" value="' + (row.vessel||'') + '" placeholder="Vessel name (ex: PROPONTIS)" oninput="vesselRows[' + idx + '].vessel=this.value" />' +
+        removeBtn +
+      '</div>' +
+      '<div class="vessel-q88-area" id="q88area-' + idx + '"' +
+        ' ondragover="vesselDragOver(event,' + idx + ')"' +
+        ' ondragleave="vesselDragLeave(' + idx + ')"' +
+        ' ondrop="vesselDrop(event,' + idx + ')">' +
+        '<div class="vessel-q88-drop" onclick="triggerVesselQ88(' + idx + ')">📎 Attach Q88 or drop here</div>' +
+        '<input type="file" id="q88input-' + idx + '" accept=".pdf,.doc,.docx" multiple style="display:none" onchange="handleVesselQ88(this,' + idx + ')" />' +
+        q88html +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function vesselDragOver(e, idx) {
+  e.preventDefault();
+  var area = document.getElementById('q88area-' + idx);
+  if (area) area.classList.add('drag-over');
+}
+function vesselDragLeave(idx) {
+  var area = document.getElementById('q88area-' + idx);
+  if (area) area.classList.remove('drag-over');
+}
+function vesselDrop(e, idx) {
+  e.preventDefault();
+  var area = document.getElementById('q88area-' + idx);
+  if (area) area.classList.remove('drag-over');
+  if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+    handleVesselQ88({ files: e.dataTransfer.files }, idx);
+  }
+}
+
+function triggerVesselQ88(idx) {
+  var inp = document.getElementById('q88input-' + idx);
+  if (inp) inp.click();
+}
+
+function handleVesselQ88(input, idx) {
+  Array.from(input.files).forEach(function(f) {
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      vesselRows[idx].q88s.push({ name: f.name, size: f.size, data: ev.target.result });
+      vaultFiles.push({ name: f.name, size: f.size, data: ev.target.result, date: new Date().toLocaleDateString('fr-FR') });
+      renderVesselRows();
+    };
+    reader.readAsDataURL(f);
+  });
+  input.value = '';
+}
+
+function removeVesselQ88(rowIdx, fileIdx) {
+  vesselRows[rowIdx].q88s.splice(fileIdx, 1);
+  renderVesselRows();
+}
+
+// ─── VAULT  ──────────────────────────────────────────────────────────────────
+function handleVaultDrop(e) {
+  e.preventDefault();
+  document.querySelectorAll('#page-q88-vault .upload-zone')[0].classList.remove('over');
+  addToVault(e.dataTransfer.files);
+}
+function addToVault(files) {
+  Array.from(files).forEach(f => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      vaultFiles.push({ name: f.name, size: f.size, data: ev.target.result, date: new Date().toLocaleDateString('fr-FR') });
+      renderVault();
+    };
+    reader.readAsDataURL(f);
+  });
+}
+function renderVault() {
+  const el = document.getElementById('vaultList');
+  if (!vaultFiles.length) {
+    el.innerHTML = '<div class="empty-state"><div class="es-icon">📂</div><div class="es-label">No Q88 documents yet</div><div class="es-sub">Upload Q88 files here or from New Clearance</div></div>';
+    return;
+  }
+  el.innerHTML = vaultFiles.map((f, i) => `
+    <div class="q88-item">
+      <span class="q88-icon">📄</span>
+      <span class="q88-name">${f.name}</span>
+      <span class="q88-size">${(f.size / 1024).toFixed(0)} KB · ${f.date}</span>
+      <button class="btn btn-sm" onclick="downloadVault(${i})">⬇ Download</button>
+      <span class="q88-remove" onclick="vaultFiles.splice(${i},1);renderVault()">✕</span>
+    </div>`).join('');
+}
+function downloadVault(i) {
+  const f = vaultFiles[i];
+  const a = document.createElement('a');
+  a.href = f.data; a.download = f.name; a.click();
+}
+
+// ─── CHIPS ──────────────────────────────────────────────────────────────────
+function renderDepotChips() {
+  const el = document.getElementById('depotChips');
+  el.innerHTML = depots.map((d, i) => `
+    <div class="chip${selectedDepots.has(i) ? ' on' : ''}" onclick="toggleDepot(${i})">${d.name}</div>`).join('');
+  document.getElementById('depotSelCount').textContent = selectedDepots.size;
+}
+function toggleDepot(i) {
+  selectedDepots.has(i) ? selectedDepots.delete(i) : selectedDepots.add(i);
+  renderDepotChips();
+}
+function renderCPChips() {
+  const el = document.getElementById('cpChips');
+  el.innerHTML = counterparties.map((c, i) => `
+    <div class="chip${selectedCPs.has(i) ? ' on-green' : ''}" onclick="toggleCP(${i})">${c.name}</div>`).join('');
+  document.getElementById('cpSelCount').textContent = selectedCPs.size;
+}
+function toggleCP(i) {
+  selectedCPs.has(i) ? selectedCPs.delete(i) : selectedCPs.add(i);
+  renderCPChips();
+}
+
+function renderCCChips() {
+  var el = document.getElementById('ccChips');
+  if (!el) return;
+  // CC uses same counterparties list
+  el.innerHTML = counterparties.map(function(c, i) {
+    return '<div class="chip' + (selectedCCs.has(i) ? ' on-yellow' : '') + '" onclick="toggleCC(' + i + ')">' + c.name + '</div>';
+  }).join('');
+  var cnt = document.getElementById('ccSelCount');
+  if (cnt) cnt.textContent = selectedCCs.size;
+}
+
+function toggleCC(i) {
+  selectedCCs.has(i) ? selectedCCs.delete(i) : selectedCCs.add(i);
+  renderCCChips();
+}
+
+// ─── TEMPLATE & PREVIEW ─────────────────────────────────────────────────────
+function fillTpl(tpl, vars) {
+  return tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] !== undefined ? vars[k] : `{{${k}}}`);
+}
+function getVars(vessel, depot, cp) {
+  var constraints = document.getElementById('constraints').value || '';
+  return {
+    VESSEL:           vessel || '—',
+    PRODUCT:          document.getElementById('product').value || '—',
+    DEAL_REF:         document.getElementById('dealRef').value || '—',
+    LAYCAN_START:     document.getElementById('lcStart').value || '—',
+    LAYCAN_END:       document.getElementById('lcEnd').value || '—',
+    LOAD_PORT:        document.getElementById('loadPort').value || '—',
+    PORT:             depot || '—',
+    DEPOT:            depot || '—',
+    PORT_PART:        depot && depot !== '—' ? ' ' + depot : '',
+    CP_NAME:          cp || '—',
+    CONSTRAINTS_LINE: constraints ? '\nConstraints:    ' + constraints : '',
+    SENDER_NAME:      cfg.firstName + ' ' + cfg.lastName,
+    SENDER_MAIL:      cfg.email,
+  };
+}
+function refreshPreview() {
+  var vessel = (vesselRows.length && vesselRows[0].vessel) ? vesselRows[0].vessel : '(VESSEL)';
+  var d = selectedDepots.size ? depots[[...selectedDepots][0]].name : '(DEPOT)';
+  var c = selectedCPs.size ? counterparties[[...selectedCPs][0]].name : '(COUNTERPARTY)';
+  var vars = getVars(vessel, d, c);
+  var subj = fillTpl(tplSubject, vars);
+  var body = fillTpl(tplBody, vars);
+  document.getElementById('emailPreview').innerHTML =
+    '<b>To:</b> ' + d + ' / ' + c + '<br><b>Subject:</b> ' + subj + '<br><br>' + body.replace(/\n/g, '<br>');
+}
+
+// ─── SEND CLEARANCES ────────────────────────────────────────────────────────
+async function sendClearances() {
+  // Validate vessel rows
+  var activeRows = vesselRows.filter(function(r) { return r.vessel.trim(); });
+  if (!activeRows.length) { showNotif('sendNotif', 'Ajoute au moins un vessel.', 'err'); return; }
+  if (!selectedDepots.size && !selectedCPs.size) { showNotif('sendNotif', 'Selectionne au moins un depot ou une contrepartie.', 'err'); return; }
+
+  var sw = document.getElementById('sendSpinWrap');
+  sw.innerHTML = '<span class="spin"></span> ';
+
+  // Force ping proxy
+  await pingProxy();
+
+  var g  = document.getElementById('product').value;
+  var d  = document.getElementById('dealRef').value;
+  var ls = document.getElementById('lcStart').value;
+  var le = document.getElementById('lcEnd').value;
+
+  var sentCount = 0, failCount = 0, sendErrors = [], mailtoFallbacks = [];
+
+  // For each vessel row × each (depot + CP combo) → one email
+  for (var vi = 0; vi < activeRows.length; vi++) {
+    var vrow   = activeRows[vi];
+    var vessel = vrow.vessel.trim();
+
+    // One separate email per depot + one per CP (never mixed)
+    var combos = [];
+    selectedDepots.forEach(function(di) { combos.push({ depot: depots[di], cp: null }); });
+    selectedCPs.forEach(function(ci)    { combos.push({ depot: null, cp: counterparties[ci] }); });
+
+    for (var ci = 0; ci < combos.length; ci++) {
+      var combo  = combos[ci];
+      var depot  = combo.depot;
+      var cp     = combo.cp;
+
+      var vars    = getVars(vessel, depot ? depot.name : '—', cp ? cp.name : '—');
+      var subject = fillTpl(tplSubject, vars);
+      var body    = fillTpl(tplBody, vars);
+
+      var toList = [];
+      if (depot && depot.emails) depot.emails.split(';').forEach(function(e) { var t=e.trim(); if(t) toList.push(t); });
+      if (cp && cp.emails)       cp.emails.split(';').forEach(function(e) { var t=e.trim(); if(t) toList.push(t); });
+
+      // Build CC list from selectedCCs
+      var ccList = [];
+      selectedCCs.forEach(function(ci) {
+        var cc = counterparties[ci];
+        if (cc && cc.emails) cc.emails.split(';').forEach(function(e) { var t=e.trim(); if(t) ccList.push(t); });
+      });
+
+      // Attach ONLY Q88s from this vessel row — renamed Q88-VESSELNAME.ext
+      var attachmentsPayload = vrow.q88s.map(function(f) {
+        var ext     = f.name.lastIndexOf('.') > 0 ? f.name.slice(f.name.lastIndexOf('.')) : '.pdf';
+        var safeName = vessel.trim().toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
+        var newName  = 'Q88_' + safeName + ext;
+        return { filename: newName, data: f.data };
+      });
+
+      console.log('[SEND] ' + vessel + ' / ' + (cp ? cp.name : depot ? depot.name : '?') + ' | to:', toList);
+      console.log('[SEND] CC:', ccList, '| selectedCCs size:', selectedCCs.size);
+      console.log('[SEND] vrow.q88s count:', vrow.q88s ? vrow.q88s.length : 'undefined', '| attachmentsPayload:', attachmentsPayload.map(function(a){return a.filename;}));
+
+      if (!_msalToken && !_proxyAvailable) {
+        // Not connected — collect for mailto fallback but warn
+        console.warn('[SEND] Not connected to Outlook (no MSAL token, no proxy). Using mailto fallback — attachments will NOT be included.');
+        mailtoFallbacks.push('mailto:' + toList.join(',') + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body));
+        sentCount++;
+      } else if (!toList.length) {
+        failCount++;
+        sendErrors.push('Pas d email pour ' + (cp ? cp.name : depot ? depot.name : '?'));
+      } else if (_msalToken) {
+        // Send via Microsoft Graph directly — no proxy needed
+        try {
+          await graphSendMail(toList, subject, body, attachmentsPayload, ccList);
+          sentCount++;
+        } catch(err) {
+          console.error('[GRAPH SEND]', err.message);
+          failCount++;
+          sendErrors.push((cp ? cp.name : depot ? depot.name : '?') + ': ' + err.message);
+        }
+      } else if (_proxyAvailable) {
+        // Proxy fallback
+        try {
+          var r = await fetch(CLEARANCE_PROXY + '/clearance/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: toList, cc: ccList, subject: subject, body: body, attachments: attachmentsPayload }),
+            signal: AbortSignal.timeout(30000),
+          });
+          var j = await r.json();
+          if (j.sent) sentCount++;
+          else { failCount++; sendErrors.push(j.error || 'erreur proxy'); }
+        } catch(err) { failCount++; sendErrors.push(err.message); }
+      }
+
+      // Add tracking row — unique per vessel × depot × CP × laycan
+      var lcKey = ls && le ? ls + ' / ' + le : '—';
+      var existing = trackingRows.find(function(r) {
+        return r.vessel === vessel &&
+               r.depot  === (depot ? depot.name : '—') &&
+               r.cp     === (cp ? cp.name : '—') &&
+               r.laycan === lcKey;
+      });
+      if (!existing) {
+        trackingRows.push({
+          rowId:               'CLR-' + Date.now() + '-' + Math.random().toString(36).slice(2,6).toUpperCase(),
+          vessel:       vessel,
+          product:      g || '—',
+          deal:         d || '—',
+          depot:        depot ? depot.name : '—',
+          cp:           cp ? cp.name : '—',
+          laycan:       ls && le ? ls + ' / ' + le : '—',
+          qty:          '—',
+          vetting:      '—',
+          status:              'sent',
+          conditions:          '—',
+          clearanceConditions: '—',
+          vettingConditions:   '—',
+          updated:             new Date().toLocaleDateString('fr-FR'),
+          emailSubject: subject,
+          recipients:   toList,
+          opsChecked:   false,
+        });
+      }
+    }
+  }
+
+  // Open mailto fallbacks sequentially (one per second to bypass popup blocker)
+  if (mailtoFallbacks.length) {
+    mailtoFallbacks.forEach(function(url, i) {
+      setTimeout(function() { window.location.href = url; }, i * 1200);
+    });
+  }
+
+  updateBadge();
+  // Sync only newly added rows (added in this send operation)
+  for (var si = 0; si < trackingRows.length; si++) {
+    var r = trackingRows[si];
+    // Only sync rows that were just created (updated = today)
+    var today = new Date().toLocaleDateString('fr-FR');
+    if (r.status === 'sent' && r.updated === today) {
+      syncRowToExcel(r, 'insert');
+    }
+  }
+  sw.innerHTML = '';
+
+  if (!_msalToken && !_proxyAvailable) {
+    showNotif('sendNotif', 'Non connecte a Outlook — connecte-toi dans Config. ' + mailtoFallbacks.length + ' mailto ouvert(s).', 'info');
+  } else if (failCount === 0) {
+    showNotif('sendNotif', sentCount + ' email(s) envoye(s) via Outlook — ' + activeRows.length + ' vessel(s).', 'ok');
+  } else if (sentCount > 0) {
+    showNotif('sendNotif', sentCount + ' envoye(s), ' + failCount + ' erreur(s): ' + sendErrors.join(' | '), 'info');
+  } else {
+    showNotif('sendNotif', 'Erreur: ' + sendErrors.join(' | '), 'err');
+  }
+}
+// ─── OUTLOOK SEND via clearance_proxy.py (/clearance/send) ──────────────────
+// Géré directement dans sendClearances() via fetch(CLEARANCE_PROXY + '/clearance/send')
+// Plus besoin de Graph API ni MSAL — win32com sur la machine locale
+
+// ─── ANALYSE OUTLOOK REPLIES VIA LITELLLM (TGS proxy) ───────────────────────
+/*
+  FLOW:
+  1. Fetch Outlook inbox via Microsoft Graph — search by email subject keywords
+     (subject contains vessel name + deal ref, to match sent clearance emails)
+  2. Pass raw email bodies + clearance context to Claude via LiteLLM TGS proxy
+  3. Claude extracts: status, vetting ref, conditions, free-text remarks
+  4. Results auto-fill the tracking board
+  
+  fetchOutlookReplies() appelle clearance_proxy.py (win32com local, port 8766).
+  Si proxy inactif → simulation AI. Pas de Graph API / MSAL nécessaire.
+*/
+
+// ─── PROXY LOCAL (clearance_proxy.py — même principe que medeco_proxy.py) ────
+const CLEARANCE_PROXY = 'http://localhost:8766';
+let _proxyAvailable = null;  // null=unknown, true/false après ping
+
+async function pingProxy() {
+  try {
+    const r = await fetch(CLEARANCE_PROXY + '/ping', { signal: AbortSignal.timeout(1500) });
+    _proxyAvailable = r.ok;
+    console.log('[PROXY] ping', _proxyAvailable ? 'OK' : 'FAIL', r.status);
+  } catch(e) {
+    _proxyAvailable = false;
+    console.log('[PROXY] ping ERROR:', e.message);
+  }
+  updateProxyStatus();
+  return _proxyAvailable;
+}
+
+function updateProxyStatus() {
+  const el = document.getElementById('proxyStatusDot');
+  const lb = document.getElementById('proxyStatusLabel');
+  if (!el) return;
+  if (_proxyAvailable === null) { el.style.background = '#888'; lb.textContent = 'Proxy...'; }
+  else if (_proxyAvailable)     { el.style.background = '#4dbe7a'; lb.textContent = 'Proxy actif'; }
+  else                          { el.style.background = '#e05c5c'; lb.textContent = 'Proxy inactif'; }
+}
+
+async function analyseOutlook() {
+  if (!trackingRows.length) { showNotif('trackNotif', 'Aucune clearance a analyser.', 'err'); return; }
+
+  var sp = document.getElementById('anlSpinner');
+  sp.innerHTML = '<span class="spin"></span> ';
+  document.getElementById('anlProg').style.display = 'flex';
+  showNotif('trackNotif', 'Analyse en cours ligne par ligne...', 'info');
+  trackingRows.forEach(function(r) { if (!r.opsChecked) r.status = 'pend'; });
+  renderTracking();
+
+  var toAnalyse = trackingRows.filter(function(r){ return !r.opsChecked; });
+  var done = 0, total = trackingRows.length;
+  if (!toAnalyse.length) {
+    sp.innerHTML = '';
+    document.getElementById('anlProg').style.display = 'none';
+    showNotif('trackNotif', 'Toutes les lignes sont marquees ops checked.', 'info');
+    trackingRows.forEach(function(r){ r.status = r.status; });
+    renderTracking();
+    return;
+  }
+  showNotif('trackNotif', toAnalyse.length + ' ligne(s) a analyser (' + (total - toAnalyse.length) + ' skippee(s)).', 'info');
+
+  function setProgress(msg) {
+    var pct = Math.round((done / total) * 100);
+    document.getElementById('anlFill').style.width = pct + '%';
+    document.getElementById('anlPct').textContent = pct + '%';
+    document.getElementById('anlMsg').textContent = msg;
+  }
+
+  // Cache emails by vessel to avoid multiple proxy calls for same vessel
+  var emailCache = {};
+  var vettingCache = {};
+
+  for (var i = 0; i < trackingRows.length; i++) {
+    var row = trackingRows[i];
+    var cpName    = row.cp    || '—';
+    var depotName = row.depot || '—';
+    var vessel    = row.vessel;
+
+    // Skip rows that have been ops-checked — already processed
+    if (row.opsChecked) {
+      console.log('[ANALYSE] Skipping (ops checked):', vessel, '/', cpName);
+      done++;
+      setProgress('(' + (i+1) + '/' + total + ') ' + vessel + ' / ' + cpName + ' [SKIP - ops checked]');
+      continue;
+    }
+
+    setProgress('(' + (i+1) + '/' + total + ') ' + vessel + ' / ' + cpName);
+
+    try {
+      // ── STEP 1: fetch emails for this vessel (cached per vessel) ────────────
+      if (!emailCache[vessel]) {
+        try {
+          if (_msalToken) {
+            // Fetch clearance replies + vetting emails in parallel
+            var results = await Promise.all([
+              graphFindEmails(vessel, 45),
+              graphFindVettingEmails(vessel, 45),
+            ]);
+            emailCache[vessel]         = results[0];  // clearance replies
+            vettingCache[vessel]       = results[1];  // vetting emails
+            console.log('[GRAPH] "' + vessel + '": ' + emailCache[vessel].length + ' clearance, ' + vettingCache[vessel].length + ' vetting email(s)');
+          } else if (_proxyAvailable) {
+            var resp = await fetch(CLEARANCE_PROXY + '/clearance/diagnose', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ vessel: vessel, days_back: 45 }),
+              signal: AbortSignal.timeout(60000),
+            });
+            var j = await resp.json();
+            emailCache[vessel]   = j.found || [];
+            vettingCache[vessel] = [];
+          } else {
+            emailCache[vessel]   = [];
+            vettingCache[vessel] = [];
+            console.warn('[ANALYSE] No Outlook connection');
+          }
+        } catch(pe) {
+          emailCache[vessel]   = [];
+          vettingCache[vessel] = [];
+          console.warn('[ANALYSE] error for', vessel, ':', pe.message);
+          if (pe.message.includes('timed out')) {
+            console.warn('[ANALYSE] => Proxy took too long scanning emails. Try reducing days_back or check proxy console.');
+          }
+        }
+      }
+
+      var allEmails = emailCache[vessel] || [];
+
+      // ── Classify emails: vetting vs clearance ──────────────────────────────
+      var isVetting = function(e) {
+        return (e.subject||'').toLowerCase().includes('vetting') ||
+               (e.from||'').toLowerCase().includes('vetting');
+      };
+
+      // Clearance emails (non-vetting)
+      var clearanceEmails = allEmails.filter(function(e) { return !isVetting(e); });
+
+      // Vetting emails: merge from vettingCache (Graph) + proxy results
+      var vettingFromCache = (vettingCache && vettingCache[vessel]) || [];
+      var vettingFromProxy = allEmails.filter(isVetting);
+      var vettingSeen = new Set();
+      var allVetting  = vettingFromCache.concat(vettingFromProxy).filter(function(e) {
+        var k = (e.received_at||'') + '|' + (e.from||'');
+        if (vettingSeen.has(k)) return false;
+        vettingSeen.add(k);
+        return true;
+      });
+      allVetting.sort(function(a, b) {
+        return (b.received_at||'').localeCompare(a.received_at||'');
+      });
+
+      // Filter clearance emails for this specific CP (by CP name in subject/body)
+      // Match emails to this specific CP:
+      // 1. Try to match by subject containing CP name or depot name
+      // 2. Try to match by the original email subject we sent (row.emailSubject)
+      // 3. Try to match by vessel name alone (RE: subject)
+      // 4. Fallback: all clearance emails passed to Claude who decides
+
+      var cpLow    = cpName.toLowerCase().trim();
+      var depotLow = depotName.toLowerCase().trim();
+
+      // Extract key words from sent subject for matching replies
+      // Subject format: "Vessel Clearance Request – VESSEL – GRADE – LAYCAN DEPOT – CP"
+      var sentSubjLow = (row.emailSubject || '').toLowerCase();
+
+      var cpEmails = clearanceEmails.filter(function(e) {
+        var subj = (e.subject || '').toLowerCase();
+        var body = (e.body   || '').toLowerCase();
+
+        // Match by CP name in subject
+        if (cpLow && subj.includes(cpLow))    return true;
+        // Match by depot name in subject
+        if (depotLow && depotLow !== '—' && subj.includes(depotLow)) return true;
+        // Match by CP name in body
+        if (cpLow && body.includes(cpLow))    return true;
+        // Match by depot name in body
+        if (depotLow && depotLow !== '—' && body.includes(depotLow)) return true;
+        // Match: reply to our sent subject (RE: + vessel + CP)
+        if (sentSubjLow && subj.includes(vessel.toLowerCase())) return true;
+        return false;
+      });
+
+      // If no match at all, pass ALL clearance emails to Claude
+      // Claude will read "Counterparty: X" in the prompt and decide
+      var usedFallback = cpEmails.length === 0;
+      var emailsForClarance = cpEmails.length ? cpEmails : clearanceEmails;
+
+      console.log('[ANALYSE] ' + vessel + '/' + cpName + ': cpEmails=' + cpEmails.length + ' clearanceEmails=' + clearanceEmails.length + ' allVetting=' + allVetting.length + (usedFallback ? ' [FALLBACK]' : ''));
+      emailsForClarance.forEach(function(e) {
+        console.log('  EMAIL:', e.received_at, e.from, '|', e.subject);
+      });
+      var emailsForClarance = (cpEmails.length ? cpEmails : clearanceEmails);
+
+      var emailBlock = emailsForClarance.length
+        ? emailsForClarance.map(function(e) {
+            return 'De: ' + e.from_name + ' <' + e.from + '> | Recu: ' + (e.received_at||'') +
+              '\nSujet: ' + e.subject + '\n' + (e.body || '').slice(0, 800);
+          }).join('\n\n---\n\n')
+        : null;
+
+      var vettingBlock = allVetting.length
+        ? allVetting.map(function(e) {
+            return 'De: ' + e.from_name + ' <' + e.from + '> | Recu: ' + (e.received_at||'') +
+              '\nSujet: ' + e.subject + '\n' + (e.body || '').slice(0, 1000);
+          }).join('\n\n---\n\n')
+        : null;
+
+      console.log('[ANALYSE] ' + vessel + '/' + cpName + ': ' +
+        emailsForClarance.length + ' clearance | ' + allVetting.length + ' vetting');
+      allVetting.forEach(function(e) {
+        console.log('  VETTING:', e.received_at, e.from, '|', e.subject);
+      });
+
+      // ── STEP 3: Claude analyses THIS row only ───────────────────────────────
+      var sysPrompt = 'You are a vessel clearance expert. ' +
+        'You receive ONE clearance request and email replies for vessel ' + vessel + '. ' +
+        'Determine the clearance status FOR THIS SPECIFIC COUNTERPARTY: ' + cpName + ' (depot: ' + depotName + '). ' +
+        'The emails may come from any address — identify the reply from ' + cpName + ' by the CP name in the subject line or email content. ' +
+        'Status: ok=accepted no restrictions, ok_sw=accepted with switch, rejected=refused, not_yet=reply but no decision, pend=no reply. ' +
+        'Extract vetting ref VRNxxxxxxx if present. ' +
+        'Return ONLY one JSON object, no array, no markdown.';
+
+
+      console.log('[VETTING] vessel=' + vessel + ' | ' + allVetting.length + ' vetting email(s) | ' + clearanceEmails.length + ' clearance email(s)');
+      allVetting.forEach(function(e) { console.log('  VETTING:', e.received_at, e.from, '|', e.subject); });
+
+      var userPrompt = [
+        'CLEARANCE:',
+        'Vessel: ' + vessel,
+        'Counterparty: ' + cpName,
+        'Depot: ' + depotName,
+        'Product: ' + row.product,
+        'Deal: ' + row.deal,
+        'Email subject sent: ' + (row.emailSubject || 'Vessel Clearance Request - ' + vessel + ' - ' + cpName),
+        '',
+        'CLEARANCE REPLIES' + (usedFallback ? ' (all emails)' : ' (filtered for ' + cpName + ')') + ':',
+        emailBlock || '(no clearance reply found)',
+        '',
+        vettingBlock ? ('VETTING EMAILS (from vetting.tam or subject contains "vetting") — sorted most recent first:') : '(no vetting emails found for ' + vessel + ')',
+        vettingBlock || '',
+        '',
+        'INSTRUCTIONS:',
+        '1. Clearance status: ok=accepted, ok_sw=accepted with switch, rejected=refused, not_yet=pending/more docs needed, pend=no reply.',
+        '2. Vetting ref: scan ALL emails for a VRN (format VRN + digits, e.g. VRN2602518).',
+        '   - Extract the VRN AND the date of the email it came from.',
+        '   - Set vetting_ref to the VRN string.',
+        '   - Set vetting_date to the email received_at date.',
+        '   - Set vetting_body to the first 300 chars of that email body (so operator can verify it is current).',
+        '   - If email asks for more docs → vetting_ref null, status not_yet.',
+        '   - If no VRN found → vetting_ref null.',
+        '3. Return ONE JSON object only, no markdown.',
+        '',
+        'JSON: {"status":"ok|ok_sw|rejected|not_yet|pend","vetting_ref":"VRNxxxxxxx or null","vetting_date":"YYYY-MM-DD or null","vetting_body":"first 300 chars of vetting email or null","conditions":"text or null","remarks":"key quote or null"}'
+      ].filter(Boolean).join('\n');
+
+      var raw = await callLiteLLM(sysPrompt, userPrompt);
+      console.log('[ANALYSE] Claude for', vessel, '/', cpName, '->', raw.slice(0, 150));
+
+      var result = {};
+      try {
+        result = JSON.parse(raw.replace(/```json|```/gi, '').trim());
+      } catch(pe) {
+        var m = raw.match(/\{[\s\S]*?\}/);
+        if (m) { try { result = JSON.parse(m[0]); } catch(e2) { result = {}; } }
+      }
+
+      row.status  = result.status || 'pend';
+      row.updated = new Date().toLocaleDateString('fr-FR');
+
+      // Vetting ref — VRN + date for operator to verify currency
+      if (result.vetting_ref) {
+        var vetDate = result.vetting_date ? ' [' + result.vetting_date.slice(0,10) + ']' : '';
+        row.vetting = result.vetting_ref + vetDate;
+      } else {
+        row.vetting = '—';
+      }
+
+      // Clearance conditions (separate from vetting)
+      var clrParts = [];
+      if (result.conditions) clrParts.push(result.conditions);
+      if (result.remarks)    clrParts.push(result.remarks);
+      row.clearanceConditions = clrParts.length ? clrParts.join(' | ') : '—';
+
+      // Vetting details — VRN + date + body excerpt for operator verification
+      var vetParts = [];
+      if (result.vetting_ref)  vetParts.push(result.vetting_ref);
+      if (result.vetting_date) vetParts.push('[' + result.vetting_date.slice(0,10) + ']');
+      if (result.vetting_body) vetParts.push(result.vetting_body.slice(0, 200));
+      row.vettingConditions = vetParts.length ? vetParts.join(' ') : '—';
+
+      // Keep legacy conditions for compat
+      row.conditions = row.clearanceConditions;
+
+    } catch(rowErr) {
+      console.error('[ANALYSE] row error:', rowErr);
+      row.status = 'pend';
+    }
+
+    done++;
+    renderTracking();
+    updateStats();
+    syncRowToExcel(row);
+  }
+
+  document.getElementById('anlFill').style.width = '100%';
+  document.getElementById('anlPct').textContent = '100%';
+  setTimeout(function() {
+    sp.innerHTML = '';
+    document.getElementById('anlProg').style.display = 'none';
+    showNotif('trackNotif', total + ' clearances analysees. Voir console F12 pour details.', 'ok');
+  }, 300);
+}
+
+
+
+// ─── fetchOutlookReplies (kept for compatibility) ────────────────────────────
+async function fetchOutlookReplies(rows) {
+  return null; // analyseOutlook now calls proxy directly per row
+}
+
+// ─── CONFIG: DEPOTS ──────────────────────────────────────────────────────────
+function renderDepotCfg() {
+  var el = document.getElementById('depotCfgTable');
+  if (!el) return;
+  el.innerHTML =
+    '<tr style="font-size:11px;color:var(--text3)"><td style="width:160px;padding:4px 4px 8px">Port name</td><td style="padding:4px 4px 8px">Email(s)</td><td style="width:50px;text-align:center">Save</td><td style="width:36px"></td></tr>' +
+    depots.map(function(d, i) {
+      return '<tr>' +
+        '<td><input value="' + d.name + '" onchange="depots[' + i + '].name=this.value" /></td>' +
+        '<td><input value="' + (d.emails||'') + '" onchange="depots[' + i + '].emails=this.value" /></td>' +
+        '<td style="text-align:center"><button class="btn btn-sm btn-primary" onclick="savePortRow(' + i + ')" title="Save to Excel">💾</button></td>' +
+        '<td><button class="btn btn-sm btn-danger" onclick="depots.splice(' + i + ',1);renderDepotCfg();renderDepotChips()">✕</button></td>' +
+        '</tr>';
+    }).join('');
+}
+
+function addDepot() { depots.push({ name: 'NEW PORT', send: false, emails: '' }); renderDepotCfg(); renderDepotChips(); }
+function addDepotWithSave(name, email) {
+  name  = name  || 'NEW PORT';
+  email = email || '';
+  depots.push({ name: name, send: true, emails: email });
+  renderDepotCfg(); renderDepotChips();
+  if (name !== 'NEW PORT') savePortToExcel(name, email);
+}
+function saveDepots() { renderDepotChips(); showNotif('depotNotif', 'Depots saved.', 'ok'); }
+
+function renderCPCfg() {
+  document.getElementById('cpCfgTable').innerHTML =
+    '<tr style="font-size:11px;color:var(--text3)"><td style="width:160px;padding:4px 4px 8px">Name</td><td style="padding:4px 4px 8px">Email(s)</td><td style="width:50px;text-align:center">Save</td><td style="width:36px"></td></tr>' +
+    counterparties.map(function(c, i) {
+      return '<tr>' +
+        '<td><input value="' + c.name + '" onchange="counterparties[' + i + '].name=this.value" /></td>' +
+        '<td><input value="' + c.emails + '" onchange="counterparties[' + i + '].emails=this.value" /></td>' +
+        '<td style="text-align:center"><button class="btn btn-sm btn-primary" onclick="saveCPRow(' + i + ')" title="Save to Excel">💾</button></td>' +
+        '<td><button class="btn btn-sm btn-danger" onclick="counterparties.splice(' + i + ',1);renderCPCfg();renderCPChips()">✕</button></td>' +
+        '</tr>';
+    }).join('');
+}
+
+async function savePortRow(i) {
+  var d = depots[i];
+  if (!d || !d.name || d.name === 'NEW PORT') {
+    showNotif('depotNotif', 'Renseigne le nom avant de sauvegarder.', 'err');
+    return;
+  }
+  try {
+    var r = await fetch(PA_ADD_PORT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ Port: d.name, Email: d.emails || '' }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (r.ok || r.status === 202) {
+      showNotif('depotNotif', d.name + ' sauvegarde dans Excel.', 'ok');
+      renderDepotChips();
+    } else {
+      showNotif('depotNotif', 'Erreur ' + r.status, 'err');
+    }
+  } catch(e) {
+    showNotif('depotNotif', 'Erreur: ' + e.message, 'err');
+  }
+}
+
+async function saveCPRow(i) {
+  var cp = counterparties[i];
+  if (!cp || !cp.name || cp.name === 'NEW CP') {
+    showNotif('cpNotif', 'Renseigne le nom avant de sauvegarder.', 'err');
+    return;
+  }
+  try {
+    var r = await fetch(PA_ADD_CP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ Name: cp.name, Email: cp.emails || '' }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (r.ok || r.status === 202) {
+      showNotif('cpNotif', cp.name + ' sauvegarde dans Excel.', 'ok');
+      renderCPChips();
+    } else {
+      showNotif('cpNotif', 'Erreur ' + r.status, 'err');
+    }
+  } catch(e) {
+    showNotif('cpNotif', 'Erreur: ' + e.message, 'err');
+  }
+}
+
+function addCP() { counterparties.push({ name: 'NEW CP', emails: '' }); renderCPCfg(); renderCPChips(); }
+function saveCPs() { renderCPChips(); showNotif('cpNotif', 'Counterparties saved.', 'ok'); }
+
+function loadTemplatePage() {
+  document.getElementById('tplSubject').value = tplSubject;
+  document.getElementById('tplBody').value = tplBody;
+}
+function saveTemplate() {
+  tplSubject = document.getElementById('tplSubject').value;
+  tplBody    = document.getElementById('tplBody').value;
+  showNotif('tplNotif', 'Template saved.', 'ok');
+}
+function insertVar(v) {
+  var ta = document.getElementById('tplBody');
+  var s = ta.selectionStart, e = ta.selectionEnd;
+  ta.value = ta.value.slice(0, s) + v + ta.value.slice(e);
+  ta.selectionStart = ta.selectionEnd = s + v.length;
+  ta.focus();
+}
+
+function loadOutlookPage() {
+  document.getElementById('cfgFirst').value           = cfg.firstName;
+  document.getElementById('cfgLast').value            = cfg.lastName;
+  document.getElementById('cfgMail').value            = cfg.email;
+  document.getElementById('cfgPhone').value           = cfg.phone;
+  document.getElementById('cfgClientId').value        = cfg.clientId;
+  document.getElementById('cfgTenantId').value        = cfg.tenantId;
+  document.getElementById('cfgLiteLLMEndpoint').value = cfg.litellmEndpoint;
+  document.getElementById('cfgLiteLLMModel').value    = cfg.litellmModel;
+  document.getElementById('cfgLiteLLMKey').value      = cfg.litellmKey;
+  document.getElementById('cfgApimUser').value        = cfg.apimUser;
+}
+function saveCfg() {
+  cfg.firstName       = document.getElementById('cfgFirst').value;
+  cfg.lastName        = document.getElementById('cfgLast').value;
+  cfg.email           = document.getElementById('cfgMail').value;
+  cfg.phone           = document.getElementById('cfgPhone').value;
+  cfg.clientId        = document.getElementById('cfgClientId').value;
+  cfg.tenantId        = document.getElementById('cfgTenantId').value;
+  cfg.litellmEndpoint = document.getElementById('cfgLiteLLMEndpoint').value;
+  cfg.litellmModel    = document.getElementById('cfgLiteLLMModel').value;
+  cfg.litellmKey      = document.getElementById('cfgLiteLLMKey').value;
+  cfg.apimUser        = document.getElementById('cfgApimUser').value;
+  document.getElementById('userName').textContent = cfg.lastName + ' ' + cfg.firstName;
+  showNotif('cfgNotif', 'Configuration saved.', 'ok');
+}
+function connectOutlook() {
+  cfg.clientId = document.getElementById('cfgClientId').value;
+  if (!cfg.clientId) { showNotif('outlookNotif', 'Enter your Azure Client ID.', 'err'); return; }
+  cfg.outlookConnected = true;
+  updateOutlookStatus();
+  showNotif('outlookNotif', 'Outlook connected.', 'ok');
+}
+function toggleOutlook() {
+  if (cfg.outlookConnected) { cfg.outlookConnected = false; updateOutlookStatus(); }
+  else {
+    document.getElementById('modalClientId').value = cfg.clientId;
+    document.getElementById('modalTenantId').value = cfg.tenantId;
+    document.getElementById('outlookModal').classList.add('show');
+  }
+}
+function doOutlookAuth() {
+  cfg.clientId = document.getElementById('modalClientId').value;
+  cfg.tenantId = document.getElementById('modalTenantId').value;
+  closeModal('outlookModal');
+  if (cfg.clientId) { cfg.outlookConnected = true; updateOutlookStatus(); }
+}
+function updateOutlookStatus() {
+  var el = document.getElementById('outlookBtn');
+  if (!el) return;
+  var connected = !!_msalToken;
+  el.className = 'outlook-status ' + (connected ? 'connected' : 'disconnected');
+  el.textContent = connected
+    ? ('● ' + (_msalAccount ? _msalAccount.username.split('@')[0] : 'Outlook'))
+    : '⬡ Connect Outlook';
+}
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function showNotif(id, msg, type) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'notif show ' + type;
+  setTimeout(function() { el.classList.remove('show'); }, 6000);
+}
+
+function exportCSV() {
+  if (!trackingRows.length) return;
+  var h = 'Vessel,Deal Ref,Grade,Counterparty,Destination,Laycan,Vetting Ref,Status,Conditions,Updated';
+  var rows = trackingRows.map(function(r) {
+    return [r.vessel,r.deal,r.product,r.cp,r.depot,r.laycan,r.vetting,r.status,'"'+r.conditions+'"',r.updated].join(',');
+  });
+  var csv = [h].concat(rows).join('\n');
+  var a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
+  a.download = 'clearances_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+async function debugInbox() {
+  document.getElementById('debugModal').classList.add('show');
+  var list = document.getElementById('debugList');
+  var info = document.getElementById('debugKeywords');
+  list.textContent = 'Recherche...';
+  info.textContent = '';
+  if (!_proxyAvailable) { list.textContent = 'Proxy inactif.'; return; }
+  var row = trackingRows[0];
+  if (!row) { list.textContent = 'Aucune clearance dans le tracking.'; return; }
+  try {
+    var r = await fetch(CLEARANCE_PROXY + '/clearance/diagnose', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vessel: row.vessel, days_back: 45 }),
+      signal: AbortSignal.timeout(30000),
+    });
+    var j = await r.json();
+    info.textContent = 'Vessel: ' + row.vessel + ' | ' + (j.count||0) + ' email(s) trouve(s)';
+    if (!j.found || !j.found.length) {
+      list.innerHTML = '<div style="color:var(--red-text);padding:10px">Aucun email avec "' + row.vessel + '" dans le sujet.</div>';
+      return;
+    }
+    list.innerHTML = j.found.map(function(e) {
+      var isReply = (e.subject||'').toLowerCase().startsWith('re:');
+      return '<div style="padding:5px 0;border-bottom:1px solid var(--border)">' +
+        '<span style="color:var(--text3);font-size:10px">[' + (e.folder||'?') + '] ' + (e.received_at||'') + '</span><br>' +
+        '<span style="color:' + (isReply?'var(--green-text)':'var(--blue-text)') + ';font-weight:500">' + (e.subject||'') + '</span><br>' +
+        '<span style="color:var(--text2);font-size:11px">De: ' + (e.from_name||'') + ' &lt;' + (e.from||'') + '&gt;</span><br>' +
+        '<span style="color:var(--text3);font-size:10px">' + (e.body||'').slice(0,120) + '</span></div>';
+    }).join('');
+  } catch(e) { list.textContent = 'Erreur: ' + e.message; }
+}
+
+
+// ─── TRACKING HELPERS ────────────────────────────────────────────────────────
+
+function esc(v) {
+  var s = v || '';
+  s = s.split('&').join('&amp;');
+  s = s.split('"').join('&quot;');
+  return s;
+}
+
+function makeSelect(rowIdx, val, disabled) {
+  var dq = String.fromCharCode(34);
+  var opts = [['pend','Pending'],['sent','Sent'],['ok','OK'],['ok_sw','OK SW'],['not_yet','Not yet'],['rejected','Rejected']];
+  if (disabled) {
+    var label = opts.filter(function(o){ return o[0]===val; });
+    return '<span class="badge b-' + (val||'pend') + '" style="font-size:11px">' + (label.length ? label[0][1] : val||'—') + '</span>';
+  }
+  var onch = 'updateRowField(' + rowIdx + ',' + dq + 'status' + dq + ',this.value)';
+  var s = '<select onchange=' + dq + onch + dq + ' style=' + dq + 'background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;padding:2px 4px;cursor:pointer' + dq + '>';
+  opts.forEach(function(o) {
+    s += '<option value=' + dq + o[0] + dq + (val===o[0]?' selected':'') + '>' + o[1] + '</option>';
+  });
+  s += '</select>';
+  return s;
+}
+
+function makeInput(rowIdx, field, val, extraStyle, disabled) {
+  var dq = String.fromCharCode(34);
+  if (disabled) {
+    return '<span style=' + dq + 'font-size:11px;color:var(--text3)' + dq + '>' + (esc(val)||'—') + '</span>';
+  }
+  var style = extraStyle || 'width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:11px';
+  var onch = 'updateRowField(' + rowIdx + ',' + dq + field + dq + ',this.value)';
+  return '<input value=' + dq + esc(val) + dq + ' onchange=' + dq + onch + dq + ' style=' + dq + style + dq + ' placeholder=' + dq + '—' + dq + ' />';
+}
+
+function updateRowField(idx, field, value) {
+  if (!trackingRows[idx]) return;
+  trackingRows[idx][field] = value;
+  if (field === 'clearanceConditions') trackingRows[idx].conditions = value;
+  trackingRows[idx].updated = new Date().toLocaleDateString('fr-FR');
+  updateBadge();
+  var row = trackingRows[idx];
+  if (!row.rowId) {
+    console.warn('[UPDATE] Row has no RowID — update saved locally only. Re-send clearance to assign a RowID.');
+    return;
+  }
+  if (typeof syncRowToExcel === 'function') syncRowToExcel(row);
+}
+
+function toggleHideOps() {
+  hideOpsChecked = !hideOpsChecked;
+  var btn = document.getElementById('btnHideOps');
+  if (btn) btn.textContent = hideOpsChecked ? '👁 Show Ops' : '👁 Hide Ops';
+  renderTracking();
+}
+
+
+function toggleOpsCheck(idx, checked) {
+  if (trackingRows[idx]) {
+    trackingRows[idx].opsChecked = checked;
+    trackingRows[idx].updated = new Date().toLocaleDateString('fr-FR');
+    renderTracking();
+    var row = trackingRows[idx];
+    if (!row.rowId) {
+      console.warn('[OPS] Row has no RowID — cannot sync to Excel. Row was loaded from Excel without RowID. Re-send this clearance to assign a RowID.');
+      return;
+    }
+    setTimeout(function() {
+      console.log('[OPS] toggleOpsCheck idx=' + idx + ' checked=' + checked + ' rowId=' + row.rowId + ' -> syncing Ops=' + (checked?'TRUE':'FALSE'));
+      syncRowToExcel(row);
+    }, 100);
+  }
+}
+
+function updateBadge() {
+  var el = document.getElementById('trackBadge');
+  if (el) {
+    var active = trackingRows.filter(function(r){ return !r.opsChecked; }).length;
+    el.textContent = active;
+    el.title = active + ' active / ' + trackingRows.length + ' total';
+  }
+}
+
+function updateStats() {
+  var el = function(id) { return document.getElementById(id); };
+  if (el('st-total')) el('st-total').textContent = trackingRows.length;
+  if (el('st-ok'))    el('st-ok').textContent    = trackingRows.filter(function(r){ return r.status==='ok'||r.status==='ok_sw'; }).length;
+  if (el('st-pend'))  el('st-pend').textContent  = trackingRows.filter(function(r){ return r.status==='pend'||r.status==='not_yet'; }).length;
+  if (el('st-rej'))   el('st-rej').textContent   = trackingRows.filter(function(r){ return r.status==='rejected'; }).length;
+  if (el('st-vet'))   el('st-vet').textContent   = trackingRows.filter(function(r){ return r.vetting && r.vetting!=='—'; }).length;
+}
+
+function renderTracking() {
+  updateFilterDropdowns();
+
+  var q          = (document.getElementById('trackSearch')    ? document.getElementById('trackSearch').value    : '').toLowerCase();
+  var fGrade     = (document.getElementById('fltGrade')       ? document.getElementById('fltGrade').value       : '');
+  var fStatus    = (document.getElementById('fltStatus')      ? document.getElementById('fltStatus').value      : '');
+  var fCP        = (document.getElementById('fltCP')          ? document.getElementById('fltCP').value          : '');
+  var fDepot     = (document.getElementById('fltDepot')       ? document.getElementById('fltDepot').value       : '');
+  var fLaycanFrom = (document.getElementById('fltLaycanFrom') ? document.getElementById('fltLaycanFrom').value  : '');
+  var fLaycanTo   = (document.getElementById('fltLaycanTo')   ? document.getElementById('fltLaycanTo').value    : '');
+
+  var sourceRows = hideOpsChecked ? trackingRows.filter(function(r){ return !r.opsChecked; }) : trackingRows;
+  var rows = sourceRows.filter(function(r) {
+    // Text search
+    if (q && !(r.vessel||'').toLowerCase().includes(q) &&
+             !(r.deal||'').toLowerCase().includes(q) &&
+             !(r.product||'').toLowerCase().includes(q) &&
+             !(r.depot||'').toLowerCase().includes(q) &&
+             !(r.cp||'').toLowerCase().includes(q)) return false;
+    // Dropdowns
+    if (fGrade  && (r.product||'') !== fGrade)  return false;
+    if (fStatus && (r.status||'')  !== fStatus) return false;
+    if (fCP     && (r.cp||'')      !== fCP)     return false;
+    if (fDepot  && (r.depot||'')   !== fDepot)  return false;
+    // Laycan date range — r.laycan format: "2026-03-18 / 2026-03-21"
+    if (fLaycanFrom || fLaycanTo) {
+      var parts = (r.laycan||'').split('/');
+      var lcStart = (parts[0]||'').trim();
+      var lcEnd   = (parts[1]||'').trim();
+      if (fLaycanFrom && lcStart && lcStart < fLaycanFrom) return false;
+      if (fLaycanTo   && lcEnd   && lcEnd   > fLaycanTo)   return false;
+    }
+    return true;
+  });
+
+  var head = document.getElementById('trackHead');
+  var body = document.getElementById('trackBody');
+  if (!head || !body) return;
+
+  var chr39 = String.fromCharCode(39);
+  head.innerHTML = '<tr>' +
+    '<th style="width:36px" title="Ops check">✓ Ops</th>' +
+    '<th>Vessel</th><th>Deal ref</th><th class="dest">Grade</th>' +
+    '<th class="cp-header">Counterparty</th><th class="dest">Destination</th>' +
+    '<th>Laycan</th><th>Vetting ref</th><th>Status</th>' +
+    '<th>Clearance conditions</th><th>Vetting details</th><th>Updated</th>' +
+    '</tr>';
+
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:2.5rem;color:var(--text3)">Aucune clearance — envoyez depuis New Clearance.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = rows.map(function(r) {
+    var rowIdx = trackingRows.indexOf(r);
+    var checkedStyle = r.opsChecked ? 'opacity:0.45;' : '';
+    return '<tr style="' + checkedStyle + '">' +
+      '<td style="text-align:center"><input type="checkbox" ' + (r.opsChecked?'checked':'') + ' onchange="toggleOpsCheck(' + rowIdx + ',this.checked)" style="cursor:pointer;accent-color:var(--green)" /></td>' +
+      '<td class="vessel-cell">' + (r.vessel||'—') + (r.rowId ? '' : ' <span title="Pas de RowID — resync depuis Send" style="color:var(--text3);font-size:9px">⚠</span>') + '</td>' +
+      '<td class="deal-cell">' + (r.deal||'—') + '</td>' +
+      '<td class="grade-cell">' + (r.product||'—') + '</td>' +
+      '<td>' + (r.cp||'—') + '</td>' +
+      '<td>' + (r.depot||'—') + '</td>' +
+      '<td style="font-family:var(--mono);font-size:11px">' + (r.laycan||'—') + '</td>' +
+      '<td class="vetting-cell">' + makeInput(rowIdx, 'vetting', r.vetting, null, r.opsChecked) + '</td>' +
+      '<td>' + makeSelect(rowIdx, r.status, r.opsChecked) + '</td>' +
+      '<td class="cond-cell">' + makeInput(rowIdx, 'clearanceConditions', r.clearanceConditions, null, r.opsChecked) + '</td>' +
+      '<td class="cond-cell">' + makeInput(rowIdx, 'vettingConditions', r.vettingConditions, 'width:100%;background:transparent;border:none;border-bottom:1px solid var(--accent2);color:var(--blue-text);font-size:11px', r.opsChecked) + '</td>' +
+      '<td style="font-size:11px;color:var(--text3)">' + (r.updated||'—') + '</td>' +
+      '</tr>';
+  }).join('');
+
+  updateStats();
+  updateBadge();
+}
+
+function statusBadge(s) {
+  var map = {
+    ok:       ['b-ok',      'OK'],
+    ok_sw:    ['b-ok-sw',   'OK SW'],
+    rejected: ['b-rej',     'REJECTED'],
+    sent:     ['b-sent',    'Sent'],
+    pend:     ['b-pend',    'Pending'],
+    not_yet:  ['b-notyet',  'Not yet cleared'],
+  };
+  var v = map[s] || ['b-notyet', s || 'pend'];
+  return '<span class="badge ' + v[0] + '">' + v[1] + '</span>';
+}
+
+
+// ─── MICROSOFT GRAPH / MSAL.js ───────────────────────────────────────────────
+const MSAL_CONFIG = {
+  auth: {
+    clientId:   '6a89c105-0067-424a-9f13-7b4fd43dc0ac',
+    authority:  'https://login.microsoftonline.com/329e91b0-e21f-48fb-a071-456717ecc28e',
+    redirectUri: window.location.href.split('?')[0],
+  },
+  cache: { cacheLocation: 'sessionStorage' }
+};
+const GRAPH_SCOPES = ['Mail.Read', 'Mail.Send', 'User.Read'];
+
+// ─── POWER AUTOMATE — ClearOps Excel sync ────────────────────────────────────
+// Write URL (upsert rows)
+const PA_CLEAROPS_URL = 'https://099c9236da0ae9fea8a2fb3b782904.4b.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/643b28efab7747b5a75ff68d634a0b25/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ieWhCZSIBHSSYZpCt1BL24lX5_Jo96-Xog2YoIxuKt4';
+
+async function syncRowToExcel(row, action) {
+  // Push one tracking row to Excel via Power Automate (upsert)
+  console.log('[SYNC] syncRowToExcel called — rowId=' + (row.rowId||'MISSING') + ' vessel=' + row.vessel + ' status=' + row.status);
+  try {
+    var payload = {
+      'Action':               action || 'update',
+      'Ops':                  row.opsChecked ? 'TRUE' : 'FALSE',
+      'RowID':                row.rowId              || '',
+      'Vessel':               row.vessel             || '',
+      'Deal ref':             row.deal               || '',
+      'Grade':                row.product            || '',
+      'Counterparty':         row.cp                 || '',
+      'Destination':          row.depot              || '',
+      'Laycan':               row.laycan             || '',
+      'Vetting ref':          row.vetting            || '',
+      'Status':               row.status             || '',
+      'Clearance conditions': row.clearanceConditions|| '',
+      'Vetting details':      row.vettingConditions  || '',
+      'Updated':              row.updated            || '',
+      'SavedBy':              cfg.email              || 'unknown',
+    };
+    var r = await fetch(PA_CLEAROPS_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+      signal:  AbortSignal.timeout(15000),
+    });
+    if (r.ok || r.status === 202) {
+      console.log('[PA] synced OK — rowId=' + (row.rowId||'MISSING') + ' vessel=' + row.vessel + ' ops=' + row.opsChecked);
+      return true;
+    } else {
+      console.warn('[PA] error', r.status);
+      return false;
+    }
+  } catch(e) {
+    console.warn('[PA] syncRowToExcel failed:', e.message);
+    return false;
+  }
+}
+
+async function syncAllToExcel() {
+  // Sync all tracking rows to Excel
+  setSyncStatus('Syncing to Excel...');
+  var ok = 0;
+  for (var i = 0; i < trackingRows.length; i++) {
+    var success = await syncRowToExcel(trackingRows[i]);
+    if (success) ok++;
+  }
+  setSyncStatus('Excel synced ' + ok + '/' + trackingRows.length + ' rows — ' + new Date().toLocaleTimeString('fr-FR'));
+}
+const GRAPH_BASE   = 'https://graph.microsoft.com/v1.0/me';
+
+var _msalInstance = null;
+var _msalAccount  = null;
+var _msalToken    = null;
+
+async function getMsalInstance() {
+  if (!_msalInstance && typeof msal !== 'undefined') {
+    _msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
+    await _msalInstance.initialize();
+  }
+  return _msalInstance;
+}
+
+async function msalLogin() {
+  var app = await getMsalInstance();
+  if (!app) { showNotif('outlookNotif', 'MSAL.js non charge — verifie ta connexion internet.', 'err'); return; }
+  try {
+    var result = await app.loginPopup({ scopes: GRAPH_SCOPES });
+    _msalAccount = result.account;
+    _msalToken   = result.accessToken;
+    updateOutlookStatus();
+    showNotif('outlookNotif', 'Connecte : ' + _msalAccount.username, 'ok');
+    document.getElementById('msalUserInfo').textContent = _msalAccount.name + ' (' + _msalAccount.username + ')';
+    document.getElementById('btnMsalLogin').textContent = 'Reconnect Outlook';
+    if (!cfg.email && _msalAccount.username) {
+      cfg.email = _msalAccount.username;
+      var el = document.getElementById('cfgMail');
+      if (el) el.value = cfg.email;
+    }
+  } catch(e) {
+    showNotif('outlookNotif', 'Connexion echouee: ' + e.message, 'err');
+  }
+}
+
+async function getGraphToken() {
+  var app = await getMsalInstance();
+  if (!app) throw new Error('MSAL non initialise');
+  var accounts = app.getAllAccounts();
+  if (accounts.length) {
+    try {
+      var r = await app.acquireTokenSilent({ scopes: GRAPH_SCOPES, account: accounts[0] });
+      _msalToken   = r.accessToken;
+      _msalAccount = r.account;
+      return _msalToken;
+    } catch(e) { /* silent failed */ }
+  }
+  var r = await app.acquireTokenPopup({ scopes: GRAPH_SCOPES });
+  _msalToken   = r.accessToken;
+  _msalAccount = r.account;
+  return _msalToken;
+}
+
+function graphHeaders() {
+  if (!_msalToken) throw new Error('Non connecte a Outlook. Va dans Config -> Outlook et connecte-toi.');
+  return { 'Authorization': 'Bearer ' + _msalToken, 'Content-Type': 'application/json' };
+}
+
+// ── Send email via Graph ──────────────────────────────────────────────────────
+async function graphSendMail(toList, subject, body, attachments, ccList) {
+  var token = await getGraphToken();
+  var toRecipients = toList.map(function(a) { return { emailAddress: { address: a } }; });
+
+  // Build attachment list — strip dataURL prefix to get pure base64
+  var attList = (attachments || []).map(function(a) {
+    var b64 = (a.data || '');
+    if (b64.includes(',')) b64 = b64.split(',')[1];
+    console.log('[ATT] ' + a.filename + ' — base64 length: ' + b64.length + ' (' + Math.round(b64.length * 0.75 / 1024) + ' KB)');
+    return {
+      '@odata.type': '#microsoft.graph.fileAttachment',
+      'name':         a.filename,
+      'contentBytes': b64,
+    };
+  });
+
+  // Check total attachment size — Graph inline limit ~4MB
+  var totalB64 = attList.reduce(function(s, a) { return s + a.contentBytes.length; }, 0);
+  var totalKB  = Math.round(totalB64 * 0.75 / 1024);
+  console.log('[SEND] ' + attList.length + ' attachment(s), ~' + totalKB + ' KB total | to: ' + toList.join(', '));
+  if (totalB64 > 0 && totalKB > 4096) {
+    console.warn('[SEND] Attachments exceed 4MB Graph limit — sending without attachments');
+    attList = [];
+  }
+
+  var msg = {
+    message: {
+      subject:        subject,
+      body:           { contentType: 'Text', content: body },
+      toRecipients:   toRecipients,
+      ccRecipients:   (ccList||[]).map(function(a){ return {emailAddress:{address:a}}; }),
+      attachments:    attList,
+    },
+    saveToSentItems: true,
+  };
+
+  var r = await fetch(GRAPH_BASE + '/sendMail', {
+    method:  'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body:    JSON.stringify(msg),
+    signal:  AbortSignal.timeout(45000),
+  });
+
+  if (!r.ok && r.status !== 202) {
+    var errBody = await r.json().catch(function() { return {}; });
+    var errMsg  = (errBody.error || {}).message || r.statusText;
+    console.error('[SEND] Graph error', r.status, errMsg);
+    throw new Error('Graph ' + r.status + ': ' + errMsg);
+  }
+
+  console.log('[SEND] OK — ' + subject.slice(0, 60));
+  return true;
+}
+
+// ── Search emails by vessel name via Graph ────────────────────────────────────
+async function graphFindEmails(vessel, daysBback) {
+  var token  = await getGraphToken();
+  var cutoff = new Date(Date.now() - daysBback * 864e5).toISOString();
+  var found  = [];
+  var seen   = new Set();
+
+  for (var folder of ['inbox', 'sentItems']) {
+    var url = GRAPH_BASE + '/mailFolders/' + folder + '/messages' +
+      '?$filter=contains(subject,' + "'" + vessel + "'" + ') and receivedDateTime ge ' + cutoff +
+      '&$select=id,subject,from,receivedDateTime,body' +
+      '&$orderby=receivedDateTime desc&$top=25';
+
+    while (url) {
+      var r = await fetch(url, {
+        headers: { 'Authorization': 'Bearer ' + token },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!r.ok) { console.warn('Graph', folder, r.status); break; }
+      var j    = await r.json();
+      var msgs = j.value || [];
+      msgs.forEach(function(m) {
+        if (seen.has(m.id)) return;
+        seen.add(m.id);
+        var frm  = (m.from || {}).emailAddress || {};
+        var body = m.body || {};
+        var text = body.contentType === 'html'
+          ? body.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 1500)
+          : (body.content || '').slice(0, 1500);
+        found.push({
+          folder:      folder,
+          subject:     m.subject || '',
+          from:        (frm.address || '').toLowerCase(),
+          from_name:   frm.name || '',
+          received_at: (m.receivedDateTime || '').slice(0, 19).replace('T', ' '),
+          body:        text,
+        });
+        console.log('[GRAPH]', folder, frm.address, '|', m.subject);
+      });
+      url = j['@odata.nextLink'] || null;
+    }
+  }
+  return found;
+}
+
+// ── Search vetting emails for a vessel ───────────────────────────────────────
+async function graphFindVettingEmails(vessel, daysBback) {
+  var token  = await getGraphToken();
+  var cutoff = new Date(Date.now() - daysBback * 864e5).toISOString();
+  var found  = [];
+  var seen   = new Set();
+
+  // Search for emails containing vessel name AND "vetting" in subject
+  // Also capture emails from vetting.tam@totalenergies.com even if subject format differs
+  for (var folder of ['inbox', 'sentItems']) {
+    var url = GRAPH_BASE + '/mailFolders/' + folder + '/messages' +
+      "?$filter=contains(subject,'" + vessel + "') and receivedDateTime ge " + cutoff +
+      '&$select=id,subject,from,receivedDateTime,body' +
+      '&$orderby=receivedDateTime desc&$top=50';
+
+    while (url) {
+      var r = await fetch(url, {
+        headers: { 'Authorization': 'Bearer ' + token },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!r.ok) break;
+      var j = await r.json();
+      (j.value || []).forEach(function(m) {
+        if (seen.has(m.id)) return;
+        seen.add(m.id);
+        var subj    = (m.subject || '').toLowerCase();
+        var fromAdr = ((m.from || {}).emailAddress || {}).address || '';
+        var isVettingSender = fromAdr.toLowerCase().includes('vetting');
+        // Match: subject contains "vetting" OR email is from a vetting address
+        if (!subj.includes('vetting') && !isVettingSender) return;
+        var frm  = (m.from || {}).emailAddress || {};
+        var body = m.body || {};
+        var text = body.contentType === 'html'
+          ? body.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 2000)
+          : (body.content || '').slice(0, 2000);
+        found.push({
+          subject:     m.subject || '',
+          from:        (frm.address || '').toLowerCase(),
+          from_name:   frm.name || '',
+          received_at: (m.receivedDateTime || '').slice(0, 19).replace('T', ' '),
+          body:        text,
+        });
+        console.log('[VETTING]', frm.address, '|', m.subject);
+      });
+      url = j['@odata.nextLink'] || null;
+    }
+  }
+  return found;
+}
+
+// Read URL — à remplacer par l'URL du flow GET une fois créé
+var PA_ADD_CP_URL   = 'https://099c9236da0ae9fea8a2fb3b782904.4b.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/fbf0f43b5a2744cdb0e262ec179d2d4e/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=jzzeLmMPh7lhf4-b9adIJ90LVORkH8qRJC7QtqAHm6c';
+var PA_ADD_PORT_URL = 'https://099c9236da0ae9fea8a2fb3b782904.4b.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/1acc4bfc219a4603aaa33fa9786e10be/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=agvYUjstcXOLDtheC_VAXrrnVLUpaI-X_MA5mg_aS7Y';
+var PA_GET_CP_URL   = 'https://099c9236da0ae9fea8a2fb3b782904.4b.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/07818a3378724039b048d624e7c4de5f/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=CrhuI0C7T1RT-X8wypNMj51hIh-bc7wZdmx003e9xTY';
+var PA_GET_PORT_URL = 'https://099c9236da0ae9fea8a2fb3b782904.4b.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/5e0beadbc9154edbb8f5b91ad36f345e/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=yU3PTQy1VLu0vu2xo--le039Zypj7hx3PzNiy8bwpNA';
+var PA_GET_URL = 'https://099c9236da0ae9fea8a2fb3b782904.4b.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/0862a7c7d9f1422ebc15ca32478a9c05/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=oP7Mmstm3TrkxC8RvtdKhowNP7aPA1OxKvPpi1EyOcs';
+
+async function loadFromExcel() {
+  if (!PA_GET_URL) {
+    setSyncStatus('PA_GET_URL non configure');
+    console.warn('[PA] PA_GET_URL is empty');
+    return;
+  }
+
+  console.log('[PA] loadFromExcel() — calling Power Automate GET flow...');
+  console.log('[PA] URL:', PA_GET_URL.slice(0, 80) + '...');
+  setSyncStatus('Chargement depuis Excel...');
+
+  try {
+    console.log('[PA] fetch START');
+    var r = await fetch(PA_GET_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+      signal: AbortSignal.timeout(20000),
+    });
+    console.log('[PA] fetch response status:', r.status, r.statusText);
+
+    if (!r.ok) {
+      var errText = await r.text().catch(function(){ return ''; });
+      console.error('[PA] HTTP error:', r.status, errText.slice(0, 200));
+      throw new Error('PA GET ' + r.status + ': ' + errText.slice(0, 100));
+    }
+
+    var raw = await r.text();
+    console.log('[PA] raw response length:', raw.length, 'chars');
+    console.log('[PA] raw preview:', raw.slice(0, 300));
+
+    var j;
+    try {
+      j = JSON.parse(raw);
+    } catch(pe) {
+      console.error('[PA] JSON parse error:', pe.message);
+      console.error('[PA] raw was:', raw.slice(0, 500));
+      throw new Error('JSON parse failed: ' + pe.message);
+    }
+
+    console.log('[PA] parsed JSON keys:', Object.keys(j));
+
+    // Power Automate peut retourner { value: [...] } ou directement [...]
+    var rows = Array.isArray(j) ? j : (j.value || []);
+    console.log('[PA]', rows.length, 'rows found in Excel');
+
+    if (!rows.length) {
+      setSyncStatus('Excel ClearCrude vide — aucune clearance');
+      console.log('[PA] No rows — Excel table is empty or PA returned nothing');
+      return;
+    }
+
+    // Log first row to verify column mapping
+    console.log('[PA] First row sample:', JSON.stringify(rows[0]));
+
+    // Preserve in-memory rowIds when reloading from Excel
+    var existingById = {};
+    trackingRows.forEach(function(r) { if (r.rowId) existingById[r.rowId] = r; });
+
+    trackingRows = rows.map(function(excelRow) {
+      var excelRowId = excelRow['RowID'] || '';
+      // If Excel has a RowID, use it; otherwise generate one
+      var rowId = excelRowId || ('CLR-' + Date.now() + '-' + Math.random().toString(36).slice(2,6).toUpperCase());
+      return {
+        rowId:               rowId,
+        vessel:              excelRow['Vessel']               || '',
+        deal:                excelRow['Deal ref']             || '',
+        product:             excelRow['Grade']                || '',
+        cp:                  excelRow['Counterparty']         || '',
+        depot:               excelRow['Destination']          || '',
+        laycan:              excelRow['Laycan']               || '',
+        vetting:             excelRow['Vetting ref']          || '—',
+        status:              (excelRow['Status'] || 'pend').toLowerCase(),
+        clearanceConditions: excelRow['Clearance conditions'] || '—',
+        vettingConditions:   excelRow['Vetting details']      || '—',
+        conditions:          excelRow['Clearance conditions'] || '—',
+        updated:             excelRow['Updated']              || '',
+        opsChecked:          (excelRow['Ops']||'').toUpperCase() === 'TRUE',
+        recipients:          [],
+        emailSubject:        '',
+      };
+    });
+
+    console.log('[PA] trackingRows built:', trackingRows.length, 'rows');
+    console.log('[PA] Sample trackingRow:', JSON.stringify(trackingRows[0]));
+
+    updateBadge();
+    renderTracking();
+    setSyncStatus(trackingRows.length + ' clearances chargees — ' + new Date().toLocaleTimeString('fr-FR'));
+    console.log('[PA] DONE — tracking board loaded from Excel');
+    // Flash sync status
+    setSyncStatus(trackingRows.length + ' clearances — refresh ' + new Date().toLocaleTimeString('fr-FR'));
+
+  } catch(e) {
+    setSyncStatus('Erreur: ' + e.message);
+    console.error('[PA] loadFromExcel FAILED:', e.message);
+    console.error('[PA] Full error:', e);
+    if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
+      console.error('[PA] => Probable cause: file:// origin blocked. Use http://localhost:8080 instead.');
+      setSyncStatus('Erreur reseau — ouvre via http://localhost:8080 (pas file://)');
+    }
+  }
+}
+
+// ─── SAVE CP / PORT TO EXCEL ─────────────────────────────────────────────────
+async function saveCounterpartyToExcel(name, email) {
+  if (!PA_ADD_CP_URL) return;
+  try {
+    await fetch(PA_ADD_CP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ Name: name, Email: email }),
+      signal: AbortSignal.timeout(10000),
+    });
+    console.log('[PA] CP saved:', name, email);
+  } catch(e) { console.warn('[PA] saveCP error:', e.message); }
+}
+
+async function savePortToExcel(port, email) {
+  if (!PA_ADD_PORT_URL) return;
+  try {
+    await fetch(PA_ADD_PORT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ Port: port, Email: email }),
+      signal: AbortSignal.timeout(10000),
+    });
+    console.log('[PA] Port saved:', port, email);
+  } catch(e) { console.warn('[PA] savePort error:', e.message); }
+}
+
+async function loadCounterpartiesFromExcel() {
+  if (!PA_GET_CP_URL) return;
+  try {
+    var r = await fetch(PA_GET_CP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!r.ok) return;
+    var j = await r.json();
+    var rows = Array.isArray(j) ? j : (j.value || []);
+    if (!rows.length) return;
+    counterparties = rows.map(function(r) {
+      return { name: r['Name'] || '', emails: r['Email'] || '' };
+    }).filter(function(c) { return c.name; });
+    renderCPChips();
+    renderCCChips();
+    renderCPCfg();
+    console.log('[PA] Loaded', counterparties.length, 'counterparties from Excel');
+  } catch(e) {
+    console.warn('[PA] loadCounterparties error:', e.message);
+  }
+}
+
+async function loadDepotsFromExcel() {
+  if (!PA_GET_PORT_URL) return;
+  try {
+    var r = await fetch(PA_GET_PORT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!r.ok) return;
+    var j = await r.json();
+    var rows = Array.isArray(j) ? j : (j.value || []);
+    if (!rows.length) return;
+    depots = rows.map(function(r) {
+      return { name: r['Port'] || '', emails: r['Email'] || '', send: true };
+    }).filter(function(d) { return d.name; });
+    renderDepotChips();
+    renderDepotCfg();
+    console.log('[PA] Loaded', depots.length, 'ports from Excel');
+  } catch(e) {
+    console.warn('[PA] loadDepots error:', e.message);
+  }
+}
+
+function setSyncStatus(msg) {
+  var el = document.getElementById('syncStatus');
+  if (el) el.textContent = '💾 ' + msg;
+}
+
+function saveIfStorage() { /* replaced by syncRowToExcel */ }
+
+// ─── FILTERS ──────────────────────────────────────────────────────────────────
+function clearFilters() {
+  ['trackSearch','fltGrade','fltStatus','fltCP','fltDepot','fltLaycanFrom','fltLaycanTo'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  renderTracking();
+}
+
+function updateFilterDropdowns() {
+  var grades  = [...new Set(trackingRows.map(function(r){ return r.product||''; }).filter(Boolean))].sort();
+  var cps     = [...new Set(trackingRows.map(function(r){ return r.cp||''; }).filter(Boolean))].sort();
+  var depots  = [...new Set(trackingRows.map(function(r){ return r.depot||''; }).filter(Boolean))].sort();
+
+  var populate = function(id, values) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var cur = el.value;
+    el.innerHTML = '<option value="">' + el.options[0].text + '</option>' +
+      values.map(function(v) {
+        return '<option value="' + v + '"' + (v===cur?' selected':'') + '>' + v + '</option>';
+      }).join('');
+  };
+  populate('fltGrade',  grades);
+  populate('fltCP',     cps);
+  populate('fltDepot',  depots);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+addVesselRow();
+renderDepotChips();
+renderCPChips();
+renderCCChips();
+renderTracking();
+pingProxy();
+setInterval(pingProxy, 15000);
+// Auto-load from Excel on startup
+loadFromExcel();
+loadCounterpartiesFromExcel();
+loadDepotsFromExcel();
+
+// Auto-refresh tracking board every 30s
+setInterval(function() {
+  // Only refresh if not currently analysing
+  var spinner = document.getElementById('anlSpinner');
+  if (spinner && spinner.innerHTML) return; // analysis in progress
+  console.log('[AUTO-REFRESH] Reloading tracking board from Excel...');
+  loadFromExcel();
+}, 30000);
+</script>
+</body>
+</html>
