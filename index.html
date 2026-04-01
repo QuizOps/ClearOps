@@ -1660,7 +1660,7 @@ async function savePortRow(i) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ Port: d.name, Email: d.emails || '' }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(30000),
     });
     if (r.ok || r.status === 202) {
       showNotif('depotNotif', d.name + ' sauvegarde dans Excel.', 'ok');
@@ -1684,7 +1684,7 @@ async function saveCPRow(i) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ Name: cp.name, Email: cp.emails || '' }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(30000),
     });
     if (r.ok || r.status === 202) {
       showNotif('cpNotif', cp.name + ' sauvegarde dans Excel.', 'ok');
@@ -1839,43 +1839,57 @@ function esc(v) {
 }
 
 function makeSelect(rowIdx, val, disabled) {
-  var dq = String.fromCharCode(34);
   var opts = [['pend','Pending'],['sent','Sent'],['ok','OK'],['ok_sw','OK SW'],['not_yet','Not yet'],['rejected','Rejected']];
   if (disabled) {
     var label = opts.filter(function(o){ return o[0]===val; });
     return '<span class="badge b-' + (val||'pend') + '" style="font-size:11px">' + (label.length ? label[0][1] : val||'—') + '</span>';
   }
-  var onch = 'updateRowField(' + rowIdx + ',' + dq + 'status' + dq + ',this.value)';
-  var s = '<select onchange=' + dq + onch + dq + ' style=' + dq + 'background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;padding:2px 4px;cursor:pointer' + dq + '>';
+  var rid = (typeof rowIdx === 'number' && trackingRows[rowIdx]) ? (trackingRows[rowIdx].rowId || rowIdx) : rowIdx;
+  var s = '<select data-rid="' + rid + '" data-field="status" onchange="handleFieldChange(this)" style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;padding:2px 4px;cursor:pointer">';
   opts.forEach(function(o) {
-    s += '<option value=' + dq + o[0] + dq + (val===o[0]?' selected':'') + '>' + o[1] + '</option>';
+    s += '<option value="' + o[0] + '"' + (val===o[0]?' selected':'') + '>' + o[1] + '</option>';
   });
   s += '</select>';
   return s;
 }
 
 function makeInput(rowIdx, field, val, extraStyle, disabled) {
-  var dq = String.fromCharCode(34);
   if (disabled) {
-    return '<span style=' + dq + 'font-size:11px;color:var(--text3)' + dq + '>' + (esc(val)||'—') + '</span>';
+    return '<span style="font-size:11px;color:var(--text3)">' + (esc(val)||'—') + '</span>';
   }
   var style = extraStyle || 'width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:11px';
-  var onch = 'updateRowField(' + rowIdx + ',' + dq + field + dq + ',this.value)';
-  return '<input value=' + dq + esc(val) + dq + ' onchange=' + dq + onch + dq + ' style=' + dq + style + dq + ' placeholder=' + dq + '—' + dq + ' />';
+  var rid2 = (typeof rowIdx === 'number' && trackingRows[rowIdx]) ? (trackingRows[rowIdx].rowId || rowIdx) : rowIdx;
+  return '<input value="' + esc(val) + '" data-rid="' + rid2 + '" data-field="' + field + '" onchange="handleFieldChange(this)" onblur="handleFieldChange(this)" style="' + style + '" placeholder="—" />';
 }
 
-function updateRowField(idx, field, value) {
-  if (!trackingRows[idx]) return;
-  trackingRows[idx][field] = value;
-  if (field === 'clearanceConditions') trackingRows[idx].conditions = value;
-  trackingRows[idx].updated = new Date().toLocaleDateString('fr-FR');
+function handleFieldChange(el) {
+  var rid   = el.getAttribute('data-rid');
+  var field = el.getAttribute('data-field');
+  var value = el.value;
+  console.log('[FIELD] handleFieldChange rid=' + rid + ' field=' + field + ' value=' + value);
+  updateRowField(rid, field, value);
+}
+
+function updateRowField(rowIdOrIdx, field, value) {
+  // Support both rowId string and numeric index for backwards compat
+  var row;
+  if (typeof rowIdOrIdx === 'string') {
+    row = trackingRows.find(function(r){ return r.rowId === rowIdOrIdx; });
+  } else {
+    row = trackingRows[rowIdOrIdx];
+  }
+  if (!row) { console.warn('[UPDATE] Row not found:', rowIdOrIdx); return; }
+  row[field] = value;
+  if (field === 'clearanceConditions') row.conditions = value;
+  row.updated = new Date().toLocaleDateString('fr-FR');
+  console.log('[UPDATE-CHECK] After assignment: row.vetting=' + row.vetting + ' row.clearanceConditions=' + row.clearanceConditions + ' row.vettingConditions=' + row.vettingConditions);
   updateBadge();
-  var row = trackingRows[idx];
   if (!row.rowId) {
-    console.warn('[UPDATE] Row has no RowID — update saved locally only. Re-send clearance to assign a RowID.');
+    console.warn('[UPDATE] Row has no RowID — update saved locally only.');
     return;
   }
-  if (typeof syncRowToExcel === 'function') syncRowToExcel(row);
+  console.log('[UPDATE] Syncing immediately: rowId=' + row.rowId + ' field=' + field + ' value=' + value);
+  syncRowToExcel(row);
 }
 
 function toggleHideOps() {
@@ -1896,10 +1910,12 @@ function toggleOpsCheck(idx, checked) {
       console.warn('[OPS] Row has no RowID — cannot sync to Excel. Row was loaded from Excel without RowID. Re-send this clearance to assign a RowID.');
       return;
     }
-    setTimeout(function() {
-      console.log('[OPS] toggleOpsCheck idx=' + idx + ' checked=' + checked + ' rowId=' + row.rowId + ' -> syncing Ops=' + (checked?'TRUE':'FALSE'));
+    if (row.rowId) {
+      console.log('[OPS] Syncing immediately: rowId=' + row.rowId + ' Ops=' + (checked?'TRUE':'FALSE'));
       syncRowToExcel(row);
-    }, 100);
+    } else {
+      console.warn('[OPS] No rowId — cannot sync');
+    }
   }
 }
 
@@ -1979,7 +1995,7 @@ function renderTracking() {
     var checkedStyle = r.opsChecked ? 'opacity:0.45;' : '';
     return '<tr style="' + checkedStyle + '">' +
       '<td style="text-align:center"><input type="checkbox" ' + (r.opsChecked?'checked':'') + ' onchange="toggleOpsCheck(' + rowIdx + ',this.checked)" style="cursor:pointer;accent-color:var(--green)" /></td>' +
-      '<td class="vessel-cell">' + (r.vessel||'—') + (r.rowId ? '' : ' <span title="Pas de RowID — resync depuis Send" style="color:var(--text3);font-size:9px">⚠</span>') + '</td>' +
+      '<td class="vessel-cell">' + (r.vessel||'—') + (!r.rowId ? ' <span title="Pas de RowId — cette ligne ne peut pas etre mise a jour. Supprime et recrée depuis Send." style="color:#f59e0b;font-size:10px;cursor:help"> ⚠ No ID</span>' : '') + '</td>' +
       '<td class="deal-cell">' + (r.deal||'—') + '</td>' +
       '<td class="grade-cell">' + (r.product||'—') + '</td>' +
       '<td>' + (r.cp||'—') + '</td>' +
@@ -2030,10 +2046,21 @@ async function syncRowToExcel(row, action) {
   // Push one tracking row to Excel via Power Automate (upsert)
   console.log('[SYNC] syncRowToExcel called — rowId=' + (row.rowId||'MISSING') + ' vessel=' + row.vessel + ' status=' + row.status);
   try {
+    // If row has no real RowId (loaded from old Excel without RowId),
+    // use a composite key so PA can still match it
+    var effectiveRowId = row.rowId || '';
+    var effectiveAction = action || 'update';
+    // If no RowId and it's an update, we can't reliably match — skip
+    if (!effectiveRowId && effectiveAction === 'update') {
+      console.warn('[SYNC] Row has no RowId and action=update — cannot match in Excel. Delete and recreate this clearance to assign a RowId.');
+      setSyncStatus('⚠ Ligne sans RowId — supprime et recrée cette clearance');
+      return false;
+    }
+
     var payload = {
-      'Action':               action || 'update',
+      'Action':               effectiveAction,
       'Ops':                  row.opsChecked ? 'TRUE' : 'FALSE',
-      'RowID':                row.rowId              || '',
+      'RowId':                effectiveRowId,
       'Vessel':               row.vessel             || '',
       'Deal ref':             row.deal               || '',
       'Grade':                row.product            || '',
@@ -2047,6 +2074,7 @@ async function syncRowToExcel(row, action) {
       'Updated':              row.updated            || '',
       'SavedBy':              cfg.email              || 'unknown',
     };
+    console.log('[PA-PAYLOAD] Vetting ref=' + payload['Vetting ref'] + ' Clearance conditions=' + payload['Clearance conditions'] + ' Vetting details=' + payload['Vetting details']);
     var r = await fetch(PA_CLEAROPS_URL, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2055,9 +2083,11 @@ async function syncRowToExcel(row, action) {
     });
     if (r.ok || r.status === 202) {
       console.log('[PA] synced OK — rowId=' + (row.rowId||'MISSING') + ' vessel=' + row.vessel + ' ops=' + row.opsChecked);
+      blockReloadFor(8000);
       return true;
     } else {
-      console.warn('[PA] error', r.status);
+      var errText = await r.text().catch(function(){ return ''; });
+      console.warn('[PA] error', r.status, errText.slice(0,200));
       return false;
     }
   } catch(e) {
@@ -2350,10 +2380,15 @@ async function loadFromExcel() {
     var existingById = {};
     trackingRows.forEach(function(r) { if (r.rowId) existingById[r.rowId] = r; });
 
+    // Build lookup of current in-memory rows by rowId to preserve local state
+    var memoryRows = {};
+    trackingRows.forEach(function(r) { if (r.rowId) memoryRows[r.rowId] = r; });
+
     trackingRows = rows.map(function(excelRow) {
-      var excelRowId = excelRow['RowID'] || '';
-      // If Excel has a RowID, use it; otherwise generate one
+      var excelRowId = excelRow['RowId'] || '';
       var rowId = excelRowId || ('CLR-' + Date.now() + '-' + Math.random().toString(36).slice(2,6).toUpperCase());
+      // If we have this row in memory AND it was recently synced, prefer Excel data
+      // but keep the rowId
       return {
         rowId:               rowId,
         vessel:              excelRow['Vessel']               || '',
@@ -2368,7 +2403,7 @@ async function loadFromExcel() {
         vettingConditions:   excelRow['Vetting details']      || '—',
         conditions:          excelRow['Clearance conditions'] || '—',
         updated:             excelRow['Updated']              || '',
-        opsChecked:          (excelRow['Ops']||'').toUpperCase() === 'TRUE',
+        opsChecked:          (excelRow['Ops']||'').toUpperCase() === 'TRUE' || (excelRow['Ops']||'') === 'True',
         recipients:          [],
         emailSubject:        '',
       };
@@ -2519,12 +2554,21 @@ loadFromExcel();
 loadCounterpartiesFromExcel();
 loadDepotsFromExcel();
 
-// Auto-refresh tracking board every 30s
+// ── Auto-refresh every 30s ───────────────────────────────────────────────────
+var _blockReloadUntil = 0;
+
+function blockReloadFor(ms) {
+  _blockReloadUntil = Date.now() + ms;
+}
+
 setInterval(function() {
-  // Only refresh if not currently analysing
   var spinner = document.getElementById('anlSpinner');
-  if (spinner && spinner.innerHTML) return; // analysis in progress
-  console.log('[AUTO-REFRESH] Reloading tracking board from Excel...');
+  if (spinner && spinner.innerHTML) return;
+  if (Date.now() < _blockReloadUntil) {
+    console.log('[AUTO-REFRESH] Blocked — PA sync in progress');
+    return;
+  }
+
   loadFromExcel();
 }, 30000);
 </script>
