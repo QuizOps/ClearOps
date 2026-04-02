@@ -2,7 +2,7 @@
   "name": "ClearOps",
   "short_name": "ClearOps",
   "description": "Vessel Clearance Management — TotalEnergies TGS",
-  "start_url": "/",
+  "start_url": "/ClearOps/",
   "display": "standalone",
   "background_color": "#0d0f14",
   "theme_color": "#0d0f14",
