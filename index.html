@@ -615,7 +615,11 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
       <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; align-items:center">
         <input type="text" id="trackSearch" placeholder="🔍 Vessel, deal, grade..." style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:7px 12px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;width:200px" oninput="renderTracking()" />
-        <select id="fltGrade"  onchange="renderTracking()" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;color:var(--text);font-size:13px;cursor:pointer"><option value="">All grades</option></select>
+        <div style="position:relative" id="fltGradeOuter"><div id="fltGradeWrap" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;min-height:34px;cursor:pointer" onclick="toggleGradeDropdown()">
+  <span id="fltGradeLabel" style="font-size:13px;color:var(--text3)">All grades</span>
+  <span style="margin-left:auto;font-size:10px;color:var(--text3)">▾</span>
+</div>
+<div id="fltGradeDropdown" style="display:none;position:absolute;z-index:300;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);box-shadow:var(--shadow2);padding:6px;min-width:160px;max-height:240px;overflow-y:auto"></div></div>
         <select id="fltStatus" onchange="renderTracking()" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;color:var(--text);font-size:13px;cursor:pointer">
           <option value="">All statuses</option>
           <option value="sent">Sent</option>
@@ -886,6 +890,7 @@ Kind regards,
 TotalEnergies Trading & Shipping
 {{SENDER_MAIL}}`;
 
+let selectedGrades  = new Set();
 let selectedDepots = new Set();
 let selectedCPs    = new Set();
 let selectedCCs    = new Set();
@@ -1038,6 +1043,59 @@ function downloadVault(i) {
 }
 
 // ─── CHIPS ──────────────────────────────────────────────────────────────────
+function toggleGradeDropdown() {
+  var dd = document.getElementById('fltGradeDropdown');
+  if (!dd) return;
+  if (dd.style.display === 'none') {
+    dd.style.display = 'block';
+    setTimeout(function() {
+      document.addEventListener('click', closeGradeDropdown, { once: true });
+    }, 50);
+  } else {
+    dd.style.display = 'none';
+  }
+}
+
+function closeGradeDropdown(e) {
+  var outer = document.getElementById('fltGradeOuter');
+  if (outer && outer.contains(e.target)) return;
+  var dd = document.getElementById('fltGradeDropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+function renderGradeDropdown(grades) {
+  var dd = document.getElementById('fltGradeDropdown');
+  if (!dd) return;
+  dd.innerHTML = grades.map(function(g) {
+    var checked = selectedGrades.has(g);
+    return '<div onclick="toggleGradeFilter(\'' + g + '\')" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--text);' + (checked ? 'background:rgba(226,0,26,0.08)' : '') + '">' +
+      '<input type="checkbox" ' + (checked ? 'checked' : '') + ' style="accent-color:var(--accent);pointer-events:none" />' +
+      '<span>' + g + '</span>' +
+      '</div>';
+  }).join('');
+}
+
+function toggleGradeFilter(grade) {
+  selectedGrades.has(grade) ? selectedGrades.delete(grade) : selectedGrades.add(grade);
+  updateGradeLabel();
+  renderTracking();
+  // Re-render dropdown to update checkboxes
+  var grades = [...new Set(trackingRows.map(function(r){ return r.product||''; }).filter(Boolean))].sort();
+  renderGradeDropdown(grades);
+}
+
+function updateGradeLabel() {
+  var label = document.getElementById('fltGradeLabel');
+  if (!label) return;
+  if (selectedGrades.size === 0) {
+    label.textContent = 'All grades';
+    label.style.color = 'var(--text3)';
+  } else {
+    label.textContent = [...selectedGrades].join(', ');
+    label.style.color = 'var(--accent)';
+  }
+}
+
 function renderDepotChips() {
   const el = document.getElementById('depotChips');
   el.innerHTML = depots.map((d, i) => `
@@ -1441,31 +1499,34 @@ async function analyseOutlook() {
       var cpLow    = cpName.toLowerCase().trim();
       var depotLow = depotName.toLowerCase().trim();
 
-      // Extract key words from sent subject for matching replies
-      // Subject format: "Vessel Clearance Request – VESSEL – GRADE – LAYCAN DEPOT – CP"
+      // The sent subject contains the exact recipient name (VOPAK or ROTTERDAM RC)
+      // We must match replies to THAT specific subject — not by city name in body
       var sentSubjLow = (row.emailSubject || '').toLowerCase();
 
       var cpEmails = clearanceEmails.filter(function(e) {
         var subj = (e.subject || '').toLowerCase();
-        var body = (e.body   || '').toLowerCase();
 
-        // Match by CP name in subject
-        if (cpLow && subj.includes(cpLow))    return true;
-        // Match by depot name in subject
-        if (depotLow && depotLow !== '—' && subj.includes(depotLow)) return true;
-        // Match by CP name in body
-        if (cpLow && body.includes(cpLow))    return true;
-        // Match by depot name in body
-        if (depotLow && depotLow !== '—' && body.includes(depotLow)) return true;
-        // Match: reply to our sent subject (RE: + vessel + CP)
-        if (sentSubjLow && subj.includes(vessel.toLowerCase())) return true;
+        // Priority 1: reply subject contains our exact sent subject keywords
+        // e.g. RE: Vessel Clearance Request – AMALTHEA – WTI – ... VOPAK – ...
+        // Strip "re:", "fw:", "tr:" prefixes for matching
+        var cleanSubj = subj.replace(/^(re|fw|tr|fwd):\s*/i, '').trim();
+        if (sentSubjLow && cleanSubj.length > 10 && sentSubjLow.includes(cleanSubj.slice(0, Math.min(cleanSubj.length, 40)))) return true;
+        if (sentSubjLow && subj.includes(vessel.toLowerCase())) {
+          // Subject contains vessel — now check it also contains CP or depot name
+          // NOT just city name that might appear in other emails
+          if (cpLow && subj.includes(cpLow)) return true;
+          if (depotLow && depotLow !== '—' && subj.includes(depotLow)) return true;
+          // If sent subject contains this depot/CP, it's a match
+          if (sentSubjLow.includes(cpLow)) return true;
+          if (depotLow !== '—' && sentSubjLow.includes(depotLow)) return true;
+        }
         return false;
       });
 
-      // If no match at all, pass ALL clearance emails to Claude
-      // Claude will read "Counterparty: X" in the prompt and decide
+      // Fallback: only if absolutely no match — pass to Claude with strict instruction
       var usedFallback = cpEmails.length === 0;
-      var emailsForClarance = cpEmails.length ? cpEmails : clearanceEmails;
+      // Do NOT use body matching — too risky (VOPAK email body mentions Rotterdam)
+      var emailsForClarance = cpEmails.length ? cpEmails : [];
 
       console.log('[ANALYSE] ' + vessel + '/' + cpName + ': cpEmails=' + cpEmails.length + ' clearanceEmails=' + clearanceEmails.length + ' allVetting=' + allVetting.length + (usedFallback ? ' [FALLBACK]' : ''));
       emailsForClarance.forEach(function(e) {
@@ -1496,8 +1557,11 @@ async function analyseOutlook() {
       // ── STEP 3: Claude analyses THIS row only ───────────────────────────────
       var sysPrompt = 'You are a vessel clearance expert. ' +
         'You receive ONE clearance request and email replies for vessel ' + vessel + '. ' +
-        'Determine the clearance status FOR THIS SPECIFIC COUNTERPARTY: ' + cpName + ' (depot: ' + depotName + '). ' +
-        'The emails may come from any address — identify the reply from ' + cpName + ' by the CP name in the subject line or email content. ' +
+        'Determine the clearance status FOR THIS SPECIFIC RECIPIENT ONLY: ' + cpName + ' (depot: ' + depotName + '). ' +
+        'CRITICAL RULE: Only use emails that are DIRECT REPLIES to the clearance request sent to ' + cpName + '. ' +
+        'If an email mentions ' + cpName + ' or ' + depotName + ' in passing (e.g. a VOPAK reply that mentions Rotterdam), IGNORE IT — it is not a reply from ' + cpName + '. ' +
+        'A valid reply must come FROM ' + cpName + ' or reference the EXACT subject line sent to them. ' +
+        'If no valid reply found → status must be pend. ' +
         'Status: ok=accepted no restrictions, ok_sw=accepted with switch, rejected=refused, not_yet=reply but no decision, pend=no reply. ' +
         'Extract vetting ref VRNxxxxxxx if present. ' +
         'Return ONLY one JSON object, no array, no markdown.';
@@ -1966,7 +2030,7 @@ function updateStats() {
 
 function getFilteredRows() {
   var q          = (document.getElementById('trackSearch')    ? document.getElementById('trackSearch').value    : '').toLowerCase();
-  var fGrade     = (document.getElementById('fltGrade')       ? document.getElementById('fltGrade').value       : '');
+  // fGrade replaced by selectedGrades Set
   var fStatus    = (document.getElementById('fltStatus')      ? document.getElementById('fltStatus').value      : '');
   var fCP        = (document.getElementById('fltCP')          ? document.getElementById('fltCP').value          : '');
   var fDepot     = (document.getElementById('fltDepot')       ? document.getElementById('fltDepot').value       : '');
@@ -1980,7 +2044,7 @@ function getFilteredRows() {
              !(r.product||'').toLowerCase().includes(q) &&
              !(r.depot||'').toLowerCase().includes(q) &&
              !(r.cp||'').toLowerCase().includes(q)) return false;
-    if (fGrade  && (r.product||'') !== fGrade)  return false;
+    if (selectedGrades.size && !selectedGrades.has(r.product||'')) return false;
     if (fStatus && (r.status||'')  !== fStatus) return false;
     if (fCP     && (r.cp||'')      !== fCP)     return false;
     if (fDepot  && (r.depot||'')   !== fDepot)  return false;
@@ -1999,7 +2063,7 @@ function renderTracking() {
   updateFilterDropdowns();
 
   var q          = (document.getElementById('trackSearch')    ? document.getElementById('trackSearch').value    : '').toLowerCase();
-  var fGrade     = (document.getElementById('fltGrade')       ? document.getElementById('fltGrade').value       : '');
+  // fGrade replaced by selectedGrades Set
   var fStatus    = (document.getElementById('fltStatus')      ? document.getElementById('fltStatus').value      : '');
   var fCP        = (document.getElementById('fltCP')          ? document.getElementById('fltCP').value          : '');
   var fDepot     = (document.getElementById('fltDepot')       ? document.getElementById('fltDepot').value       : '');
@@ -2015,7 +2079,7 @@ function renderTracking() {
              !(r.depot||'').toLowerCase().includes(q) &&
              !(r.cp||'').toLowerCase().includes(q)) return false;
     // Dropdowns
-    if (fGrade  && (r.product||'') !== fGrade)  return false;
+    if (selectedGrades.size && !selectedGrades.has(r.product||'')) return false;
     if (fStatus && (r.status||'')  !== fStatus) return false;
     if (fCP     && (r.cp||'')      !== fCP)     return false;
     if (fDepot  && (r.depot||'')   !== fDepot)  return false;
@@ -2603,10 +2667,12 @@ function saveIfStorage() { /* replaced by syncRowToExcel */ }
 
 // ─── FILTERS ──────────────────────────────────────────────────────────────────
 function clearFilters() {
-  ['trackSearch','fltGrade','fltStatus','fltCP','fltDepot','fltLaycanFrom','fltLaycanTo'].forEach(function(id) {
+  ['trackSearch','fltStatus','fltCP','fltDepot','fltLaycanFrom','fltLaycanTo'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.value = '';
   });
+  selectedGrades.clear();
+  updateGradeLabel();
   renderTracking();
 }
 
@@ -2614,6 +2680,9 @@ function updateFilterDropdowns() {
   var grades  = [...new Set(trackingRows.map(function(r){ return r.product||''; }).filter(Boolean))].sort();
   var cps     = [...new Set(trackingRows.map(function(r){ return r.cp||''; }).filter(Boolean))].sort();
   var depots  = [...new Set(trackingRows.map(function(r){ return r.depot||''; }).filter(Boolean))].sort();
+
+  renderGradeDropdown(grades);
+  updateGradeLabel();
 
   var populate = function(id, values) {
     var el = document.getElementById(id);
@@ -2624,7 +2693,6 @@ function updateFilterDropdowns() {
         return '<option value="' + v + '"' + (v===cur?' selected':'') + '>' + v + '</option>';
       }).join('');
   };
-  populate('fltGrade',  grades);
   populate('fltCP',     cps);
   populate('fltDepot',  depots);
 }
