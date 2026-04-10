@@ -202,12 +202,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .prog-bar { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
 .prog-fill { height: 100%; background: var(--accent); transition: width 0.25s; border-radius: 2px; }
 
-/* STATS ROW */
-.stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; }
-.stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius2); padding: 14px 16px; }
-.stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); font-weight: 600; }
-.stat-val { font-size: 26px; font-weight: 600; margin-top: 4px; font-family: var(--mono); }
-.stat-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
 
 /* CONFIG TABLE */
 .cfg-table { width: 100%; border-collapse: collapse; }
@@ -605,13 +600,7 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         <div class="page-sub">Live clearance status across all deals, vessels and destinations.</div>
       </div>
 
-      <div class="stats-row" id="statsRow">
-        <div class="stat-card"><div class="stat-label">Total</div><div class="stat-val" id="st-total">0</div><div class="stat-sub">clearances</div></div>
-        <div class="stat-card"><div class="stat-label">Cleared</div><div class="stat-val" style="color:var(--green-text)" id="st-ok">0</div><div class="stat-sub">OK / OK SW</div></div>
-        <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-val" style="color:var(--orange-text)" id="st-pend">0</div><div class="stat-sub">awaiting reply</div></div>
-        <div class="stat-card"><div class="stat-label">Rejected</div><div class="stat-val" style="color:var(--red-text)" id="st-rej">0</div><div class="stat-sub">refusals</div></div>
-        <div class="stat-card"><div class="stat-label">Vetting</div><div class="stat-val" style="color:var(--blue-text)" id="st-vet">0</div><div class="stat-sub">refs received</div></div>
-      </div>
+
 
       <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; align-items:center">
         <input type="text" id="trackSearch" placeholder="🔍 Vessel, deal, grade..." style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:7px 12px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;width:200px" oninput="renderTracking()" />
@@ -644,10 +633,7 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
           <span id="anlSpinner"></span>🔍 Analyse Outlook replies (AI)
         </button>
         <button class="btn" id="btnHideOps" onclick="toggleHideOps()">👁 Hide Ops</button>
-        <button class="btn" onclick="debugInbox()">🔎 Debug inbox</button>
         <button class="btn" onclick="exportCSV()">⬇ Export CSV</button>
-        <button class="btn" onclick="loadFromExcel()" title="Recharger depuis Excel ClearOps">🔄 Load Excel</button>
-        <button class="btn btn-primary" onclick="syncAllToExcel()" title="Sync all rows to Excel ClearOps">💾 Sync Excel</button>
         <div id="syncStatus" style="font-size:11px;color:var(--text3);margin-left:auto"></div>
       </div>
       <div class="prog-row" id="anlProg" style="display:none">
@@ -755,6 +741,10 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
           <div class="field"><label>Email (sender)</label><input type="text" id="cfgMail" placeholder="andrea.maqueda@totalenergies.com" /></div>
           <div class="field"><label>Phone</label><input type="text" id="cfgPhone" placeholder="+41 22 710 16 76" /></div>
         </div>
+        <div class="btn-row" style="margin-top:14px">
+          <button class="btn btn-primary" onclick="saveIdentity()">💾 Save identity</button>
+          <div class="notif" id="identityNotif" style="display:inline-block;margin-left:10px"></div>
+        </div>
       </div>
       <div class="card" style="margin-bottom:16px">
         <div class="card-title">Connexion Outlook (Microsoft Graph)</div>
@@ -792,20 +782,7 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   </div><!-- /main -->
 </div><!-- /layout -->
 
-<!-- MODAL: Debug inbox -->
-<div class="modal-wrap" id="debugModal">
-  <div class="modal" style="width:700px; max-width:95vw">
-    <div class="modal-title">🔎 Inbox debug — derniers emails reçus</div>
-    <p style="font-size:12px; color:var(--text2); margin-bottom:12px">Emails des 3 derniers jours (sans filtre sujet). Vérifie que les sujets des réponses contiennent bien le nom du vessel ou "clearance".</p>
-    <div id="debugList" style="font-size:11px; font-family:var(--mono); max-height:400px; overflow-y:auto; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:10px; color:var(--text2)">
-      Chargement...
-    </div>
-    <div id="debugKeywords" style="margin-top:10px; font-size:11px; color:var(--text3)"></div>
-    <div class="modal-foot">
-      <button class="btn" onclick="closeModal('debugModal')">Fermer</button>
-    </div>
-  </div>
-</div>
+
 
 <!-- MODAL: Outlook auth -->
 <div class="modal-wrap" id="outlookModal">
@@ -828,9 +805,9 @@ let depots = []; // loaded from Excel on startup
 let counterparties = []; // loaded from Excel on startup
 
 let cfg = {
-  firstName: 'Andrea', lastName: 'MAQUEDA',
-  email: 'andrea.maqueda@totalenergies.com',
-  phone: '+41 22 710 16 76',
+  firstName: '', lastName: '',
+  email: '',
+  phone: '',
   clientId: '', tenantId: '', secret: '',
   litellmEndpoint: 'https://api.chatgpttte.iasp.tgscloud.net/plugins/litellm/api/v1/chat/completions',
   litellmModel: 'bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0',
@@ -1783,19 +1760,66 @@ function loadOutlookPage() {
   document.getElementById('cfgLiteLLMKey').value      = cfg.litellmKey;
   document.getElementById('cfgApimUser').value        = cfg.apimUser;
 }
+function saveIdentity() {
+  cfg.firstName = document.getElementById('cfgFirst').value.trim();
+  cfg.lastName  = document.getElementById('cfgLast').value.trim();
+  cfg.email     = document.getElementById('cfgMail').value.trim();
+  cfg.phone     = document.getElementById('cfgPhone').value.trim();
+  try {
+    localStorage.setItem('clearops_user', JSON.stringify({
+      firstName: cfg.firstName, lastName: cfg.lastName,
+      email: cfg.email, phone: cfg.phone
+    }));
+  } catch(e) {}
+  var el = document.getElementById('userName');
+  if (el) el.textContent = (cfg.lastName || '') + ' ' + (cfg.firstName || '');
+  showNotif('identityNotif', '✓ Saved', 'ok');
+}
+
 function saveCfg() {
   cfg.firstName       = document.getElementById('cfgFirst').value;
   cfg.lastName        = document.getElementById('cfgLast').value;
   cfg.email           = document.getElementById('cfgMail').value;
   cfg.phone           = document.getElementById('cfgPhone').value;
-  cfg.clientId        = document.getElementById('cfgClientId').value;
-  cfg.tenantId        = document.getElementById('cfgTenantId').value;
+  cfg.clientId        = document.getElementById('cfgClientId') ? document.getElementById('cfgClientId').value : cfg.clientId;
+  cfg.tenantId        = document.getElementById('cfgTenantId') ? document.getElementById('cfgTenantId').value : cfg.tenantId;
   cfg.litellmEndpoint = document.getElementById('cfgLiteLLMEndpoint').value;
   cfg.litellmModel    = document.getElementById('cfgLiteLLMModel').value;
   cfg.litellmKey      = document.getElementById('cfgLiteLLMKey').value;
   cfg.apimUser        = document.getElementById('cfgApimUser').value;
-  document.getElementById('userName').textContent = cfg.lastName + ' ' + cfg.firstName;
-  showNotif('cfgNotif', 'Configuration saved.', 'ok');
+  // Save to localStorage
+  try {
+    localStorage.setItem('clearops_user', JSON.stringify({
+      firstName: cfg.firstName, lastName: cfg.lastName,
+      email: cfg.email, phone: cfg.phone
+    }));
+    localStorage.setItem('clearops_cfg', JSON.stringify({
+      litellmEndpoint: cfg.litellmEndpoint, litellmModel: cfg.litellmModel,
+      litellmKey: cfg.litellmKey, apimUser: cfg.apimUser
+    }));
+  } catch(e) { console.warn('localStorage unavailable'); }
+  document.getElementById('userName').textContent = (cfg.lastName || '') + ' ' + (cfg.firstName || '');
+  showNotif('cfgNotif', 'Configuration sauvegardée.', 'ok');
+}
+
+function loadCfgFromStorage() {
+  try {
+    var user = JSON.parse(localStorage.getItem('clearops_user') || '{}');
+    var tech = JSON.parse(localStorage.getItem('clearops_cfg') || '{}');
+    if (user.firstName) cfg.firstName = user.firstName;
+    if (user.lastName)  cfg.lastName  = user.lastName;
+    if (user.email)     cfg.email     = user.email;
+    if (user.phone)     cfg.phone     = user.phone;
+    if (tech.litellmEndpoint) cfg.litellmEndpoint = tech.litellmEndpoint;
+    if (tech.litellmModel)    cfg.litellmModel    = tech.litellmModel;
+    if (tech.litellmKey)      cfg.litellmKey      = tech.litellmKey;
+    if (tech.apimUser)        cfg.apimUser        = tech.apimUser;
+    // Update username display
+    if (cfg.firstName || cfg.lastName) {
+      var el = document.getElementById('userName');
+      if (el) el.textContent = (cfg.lastName || '') + ' ' + (cfg.firstName || '');
+    }
+  } catch(e) { console.warn('Could not load cfg from storage'); }
 }
 function connectOutlook() {
   cfg.clientId = document.getElementById('cfgClientId').value;
@@ -1850,37 +1874,6 @@ function exportCSV() {
   a.click();
 }
 
-async function debugInbox() {
-  document.getElementById('debugModal').classList.add('show');
-  var list = document.getElementById('debugList');
-  var info = document.getElementById('debugKeywords');
-  list.textContent = 'Recherche...';
-  info.textContent = '';
-  if (!_proxyAvailable) { list.textContent = 'Proxy inactif.'; return; }
-  var row = trackingRows[0];
-  if (!row) { list.textContent = 'Aucune clearance dans le tracking.'; return; }
-  try {
-    var r = await fetch(CLEARANCE_PROXY + '/clearance/diagnose', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vessel: row.vessel, days_back: 45 }),
-      signal: AbortSignal.timeout(30000),
-    });
-    var j = await r.json();
-    info.textContent = 'Vessel: ' + row.vessel + ' | ' + (j.count||0) + ' email(s) trouve(s)';
-    if (!j.found || !j.found.length) {
-      list.innerHTML = '<div style="color:var(--red-text);padding:10px">Aucun email avec "' + row.vessel + '" dans le sujet.</div>';
-      return;
-    }
-    list.innerHTML = j.found.map(function(e) {
-      var isReply = (e.subject||'').toLowerCase().startsWith('re:');
-      return '<div style="padding:5px 0;border-bottom:1px solid var(--border)">' +
-        '<span style="color:var(--text3);font-size:10px">[' + (e.folder||'?') + '] ' + (e.received_at||'') + '</span><br>' +
-        '<span style="color:' + (isReply?'var(--green-text)':'var(--blue-text)') + ';font-weight:500">' + (e.subject||'') + '</span><br>' +
-        '<span style="color:var(--text2);font-size:11px">De: ' + (e.from_name||'') + ' &lt;' + (e.from||'') + '&gt;</span><br>' +
-        '<span style="color:var(--text3);font-size:10px">' + (e.body||'').slice(0,120) + '</span></div>';
-    }).join('');
-  } catch(e) { list.textContent = 'Erreur: ' + e.message; }
-}
 
 
 // ─── TRACKING HELPERS ────────────────────────────────────────────────────────
@@ -2019,14 +2012,7 @@ function updateBadge() {
   }
 }
 
-function updateStats() {
-  var el = function(id) { return document.getElementById(id); };
-  if (el('st-total')) el('st-total').textContent = trackingRows.length;
-  if (el('st-ok'))    el('st-ok').textContent    = trackingRows.filter(function(r){ return r.status==='ok'||r.status==='ok_sw'; }).length;
-  if (el('st-pend'))  el('st-pend').textContent  = trackingRows.filter(function(r){ return r.status==='pend'||r.status==='not_yet'; }).length;
-  if (el('st-rej'))   el('st-rej').textContent   = trackingRows.filter(function(r){ return r.status==='rejected'; }).length;
-  if (el('st-vet'))   el('st-vet').textContent   = trackingRows.filter(function(r){ return r.vetting && r.vetting!=='—'; }).length;
-}
+function updateStats() { /* stats cards removed */ }
 
 function getFilteredRows() {
   var q          = (document.getElementById('trackSearch')    ? document.getElementById('trackSearch').value    : '').toLowerCase();
@@ -2221,16 +2207,6 @@ async function syncRowToExcel(row, action) {
   }
 }
 
-async function syncAllToExcel() {
-  // Sync all tracking rows to Excel
-  setSyncStatus('Syncing to Excel...');
-  var ok = 0;
-  for (var i = 0; i < trackingRows.length; i++) {
-    var success = await syncRowToExcel(trackingRows[i]);
-    if (success) ok++;
-  }
-  setSyncStatus('Excel synced ' + ok + '/' + trackingRows.length + ' rows — ' + new Date().toLocaleTimeString('fr-FR'));
-}
 const GRAPH_BASE   = 'https://graph.microsoft.com/v1.0/me';
 
 var _msalInstance = null;
@@ -2698,6 +2674,7 @@ function updateFilterDropdowns() {
 }
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
+loadCfgFromStorage();
 addVesselRow();
 renderDepotChips();
 renderCPChips();
