@@ -330,7 +330,7 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 }
 
 /* ── Bottom Navigation ── */
-.bottom-nav { display: none; }
+.bottom-nav, .bottom-nav-more { display: none; }
 
 @media (max-width: 768px) {
   .bottom-nav {
@@ -2327,7 +2327,7 @@ async function loadFromExcel() {
         clearanceConditions: excelRow['Clearance conditions'] || '—',
         vettingConditions:   excelRow['Vetting details']      || '—',
         conditions:          excelRow['Clearance conditions'] || '—',
-        updated:             excelRow['Updated']              || '',
+        updated:             excelDateToString(excelRow['Updated']) || '',
         opsChecked:          (excelRow['Ops']||'').toUpperCase() === 'TRUE' || (excelRow['Ops']||'') === 'True',
         recipients:          [],
         emailSubject:        '',
@@ -2429,6 +2429,20 @@ async function loadDepotsFromExcel() {
   } catch(e) {
     console.warn('[PA] loadDepots error:', e.message);
   }
+}
+
+function excelDateToString(val) {
+  if (!val) return '';
+  // If already a date string (contains /)
+  if (typeof val === 'string' && val.includes('/')) return val;
+  // If it's a number (Excel serial date)
+  var num = parseFloat(val);
+  if (!isNaN(num) && num > 40000) {
+    // Excel serial: days since 1900-01-01 (with leap year bug)
+    var date = new Date((num - 25569) * 86400 * 1000);
+    return date.toLocaleDateString('fr-FR');
+  }
+  return val || '';
 }
 
 function setSyncStatus(msg) {
